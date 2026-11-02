@@ -1,6 +1,6 @@
 /*
- * Swiftify, a spotify player for desktop
- * Copyright (C) 2026  shred0s
+ * Tubify, a YouTube Music player for desktop
+ * Copyright (C) 2026  Hinika
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,9 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
-// connecting the library and playback for the first time (SpotifySetupView)
+// connecting YouTube Music for the first time
 Flickable {
     id: root
 
@@ -102,7 +102,7 @@ Flickable {
 
         TitleText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr("Connect Your Music")
+            text: qsTr("Connect YouTube Music")
             font.pixelSize: Appearance.fontSize.display
             font.weight: Font.Bold
         }
@@ -111,7 +111,7 @@ Flickable {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: qsTr("Swiftify needs a Client ID from your own Spotify developer app. You only have to set this up once.")
+            text: qsTr("Tubify signs in with the Cookie header from your browser. One sign-in opens your library and playback together, and you only have to do it once.")
             color: Appearance.colors.onSurfaceVariant
         }
 
@@ -121,81 +121,66 @@ Flickable {
 
             Step {
                 number: 1
-                title: qsTr("Create a Spotify app")
-                detail: qsTr("Open the Spotify Developer Dashboard, choose Create app, and select Web API if Spotify asks.")
+                title: qsTr("Open YouTube Music")
+                detail: qsTr("Sign in at music.youtube.com in your browser.")
             }
 
             TextButton {
                 x: 38
                 variant: TextButton.Text
                 symbol: "open_in_new"
-                text: qsTr("Open Spotify Developer Dashboard")
-                onClicked: App.openUrl("https://developer.spotify.com/dashboard")
+                text: qsTr("Open music.youtube.com")
+                onClicked: App.openUrl("https://music.youtube.com")
             }
 
             Step {
                 number: 2
-                title: qsTr("Add Swiftify's redirect URI")
-                detail: qsTr("In the app settings, add this exact address under Redirect URIs, then save:")
-            }
-
-            Rectangle {
-                x: 38
-                width: redirect.implicitWidth + 24
-                height: redirect.implicitHeight + 16
-                radius: Appearance.rounding.verySmall
-                color: Appearance.colors.surfaceContainerHigh
-
-                TextEdit {
-                    id: redirect
-                    anchors.centerIn: parent
-                    text: Session.redirectUri
-                    readOnly: true
-                    selectByMouse: true
-                    font.family: Appearance.monoFontFamily
-                    font.pixelSize: Appearance.fontSize.smallie
-                    color: Appearance.colors.onSurface
-                    selectionColor: Appearance.colors.primary
-                    selectedTextColor: Appearance.colors.onPrimary
-                }
+                title: qsTr("Copy your cookie")
+                detail: qsTr("Press F12, open the Network tab, reload the page, click any request to music.youtube.com, and copy the whole Cookie request header.")
             }
 
             Step {
                 number: 3
-                title: qsTr("Paste your Client ID")
-                detail: qsTr("Copy the Client ID from the app settings. You do not need the Client Secret.")
+                title: qsTr("Paste it below")
+                detail: qsTr("The cookie stays on this computer, in a file only you can read.")
             }
         }
 
-        OutlinedTextField {
+        Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(460, parent.width)
-            placeholder: qsTr("Spotify Client ID")
-            text: Session.libraryClientId
-            onTextEdited: Session.libraryClientId = text
-            onAccepted: Session.beginLibraryLogin()
+            height: 132
+            radius: Appearance.rounding.small
+            color: Appearance.colors.surfaceContainerHigh
+            border.width: 1
+            border.color: cookieArea.activeFocus ? Appearance.colors.primary : Appearance.colors.outlineVariant
+
+            TextArea {
+                id: cookieArea
+                anchors.fill: parent
+                anchors.margins: 10
+                placeholderText: qsTr("Cookie: SAPISID=…; __Secure-3PAPISID=…; SID=…")
+                wrapMode: TextEdit.WrapAnywhere
+                selectByMouse: true
+                font.family: Appearance.monoFontFamily
+                font.pixelSize: Appearance.fontSize.smallie
+                color: Appearance.colors.onSurface
+                placeholderTextColor: Appearance.colors.onSurfaceVariant
+                selectionColor: Appearance.colors.primary
+                selectedTextColor: Appearance.colors.onPrimary
+                background: null
+            }
         }
 
-        // the screen stays until both are connected (UiState.needsSetup):
-        // each button says when its half is done, and the next one leads
-        Row {
+        TextButton {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 12
-
-            TextButton {
-                variant: Session.libraryConnected ? TextButton.Tonal : TextButton.Filled
-                symbol: Session.libraryConnected ? "check" : ""
-                text: Session.libraryConnected ? qsTr("Library Connected") : qsTr("Connect Library")
-                enabled: !Session.libraryConnected && Session.libraryClientId.trim().length > 0
-                onClicked: Session.beginLibraryLogin()
-            }
-            TextButton {
-                variant: Session.libraryConnected && !Session.connected ? TextButton.Filled : TextButton.Tonal
-                symbol: Session.connected ? "check" : ""
-                text: Session.connected ? qsTr("Playback Connected") : qsTr("Connect Playback")
-                enabled: !Session.connected
-                onClicked: Session.beginPlaybackLogin()
-            }
+            variant: Session.connected ? TextButton.Tonal : TextButton.Filled
+            symbol: Session.connected ? "check" : (Session.loginInProgress ? "progress_activity" : "login")
+            text: Session.connected ? qsTr("Connected")
+                : Session.loginInProgress ? qsTr("Signing In…")
+                : qsTr("Sign In")
+            enabled: !Session.connected && !Session.loginInProgress && cookieArea.text.trim().length > 0
+            onClicked: Session.signIn(cookieArea.text)
         }
 
         StyledText {
@@ -203,14 +188,11 @@ Flickable {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
-            text: Session.libraryConnected && !Session.connected
-                  ? qsTr("Your library is connected. Now connect playback so Swiftify can play music.")
-                  : Session.connected && !Session.libraryConnected
-                    ? qsTr("Playback is connected. Now connect your library to see your music.")
-                    : qsTr("Connect Library first, then Connect Playback so Swiftify can play music.")
+            text: Session.connected
+                  ? qsTr("Connected. Your library is loading…")
+                  : qsTr("Paste the Cookie header above and choose Sign In.")
             font.pixelSize: Appearance.fontSize.smaller
-            color: Session.libraryConnected !== Session.connected ? Appearance.colors.primary
-                                                                  : Appearance.colors.onSurfaceVariant
+            color: Session.connected ? Appearance.colors.primary : Appearance.colors.onSurfaceVariant
         }
     }
 }

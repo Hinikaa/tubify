@@ -1,6 +1,6 @@
 /*
- * Swiftify, a spotify player for desktop
- * Copyright (C) 2026  shred0s
+ * Tubify, a YouTube Music player for desktop
+ * Copyright (C) 2026  Hinika
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@
 
 #include "spotify/SpotifyError.h"
 
+#include <QDir>
+#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QTimeZone>
-#include <qt6keychain/keychain.h>
-#include <QCoroSignal>
+#include <QStandardPaths>
+#include <QFileInfo>
 
 namespace swiftify {
 
@@ -33,98 +34,90 @@ namespace {
 SpotifyError storeError(const QString &operation, const QString &detail)
 {
     return {SpotifyError::Kind::Credentials,
-            QStringLiteral("Could not %1 the saved Spotify login: %2").arg(operation, detail)};
+            QStringLiteral("Could not %1 the saved YouTube Music login: %2").arg(operation, detail)};
+}
+
+QString storePath()
+{
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return QDir(directory).filePath(QStringLiteral("login.json"));
 }
 
 } // namespace
 
 QByteArray StoredCredentials::toJson() const
 {
-    QJsonObject object {
-        {QStringLiteral("clientID"), clientId},
-        {QStringLiteral("refreshToken"), refreshToken},
-        {QStringLiteral("authorizationVersion"), authorizationVersion},
-    };
-    if (!playbackLogin.isEmpty()) {
-        object.insert(QStringLiteral("playbackLogin"), playbackLogin);
-    }
-    if (!accessToken.isEmpty() && accessTokenExpiration.isValid()) {
-        object.insert(QStringLiteral("accessToken"), accessToken);
-        object.insert(QStringLiteral("accessTokenExpiration"), accessTokenExpiration.toMSecsSinceEpoch());
-    }
-    return QJsonDocument(object).toJson(QJsonDocument::Compact);
+    return QJsonDocument(QJsonObject {{QStringLiteral("login"), login}}).toJson(QJsonDocument::Compact);
 }
 
 std::optional<StoredCredentials> StoredCredentials::fromJson(const QByteArray &json)
 {
     const QJsonObject object = QJsonDocument::fromJson(json).object();
-    StoredCredentials credentials;
-    credentials.clientId = object.value(QStringLiteral("clientID")).toString();
-    credentials.refreshToken = object.value(QStringLiteral("refreshToken")).toString();
-    credentials.authorizationVersion = object.value(QStringLiteral("authorizationVersion")).toInt();
-    credentials.playbackLogin = object.value(QStringLiteral("playbackLogin")).toString();
-    credentials.accessToken = object.value(QStringLiteral("accessToken")).toString();
-    if (const qint64 expiration = object.value(QStringLiteral("accessTokenExpiration")).toInteger(); expiration > 0) {
-        credentials.accessTokenExpiration = QDateTime::fromMSecsSinceEpoch(expiration, QTimeZone::UTC);
-    }
-    // a login spotify revoked can still play through librespot's own
-    if (credentials.clientId.isEmpty() || (credentials.refreshToken.isEmpty() && credentials.playbackLogin.isEmpty())) {
+    const QString login = object.value(QStringLiteral("login")).toString();
+    if (login.isEmpty()) {
         return std::nullopt;
     }
-    return credentials;
+    return StoredCredentials {login};
+}
+
+QString CredentialStore::service()
+{
+    return QStringLiteral("dev.hinika.Tubify.youtube-music");
 }
 
 QString CredentialStore::accountName(Account account)
 {
-    return account == Account::Playback ? QStringLiteral("spotify-oauth") : QStringLiteral("spotify-library-oauth");
+    return account == Account::Playback ? QStringLiteral("youtube-music-login")
+                                        : QStringLiteral("youtube-music-library");
 }
 
-QCoro::Task<std::optional<StoredCredentials>> KeychainCredentialStore::load(Account account)
+QCoro::Task<std::optional<StoredCredentials>> FileCredentialStore::load(Account account)
 {
-    QKeychain::ReadPasswordJob job(service());
-    job.setAutoDelete(false);
-    job.setKey(accountName(account));
-    job.start();
-    co_await qCoro(&job, &QKeychain::Job::finished);
-
-    if (job.error() == QKeychain::EntryNotFound) {
+    if (account != Account::Playback) {
         co_return std::nullopt;
     }
-    if (job.error() != QKeychain::NoError) {
-        throw storeError(QStringLiteral("load"), job.errorString());
+    QFile file(storePath());
+    if (!file.exists()) {
+        co_return std::nullopt;
     }
-    const auto credentials = StoredCredentials::fromJson(job.binaryData());
+    if (!file.open(QIODevice::ReadOnly)) {
+        throw storeError(QStringLiteral("read"), file.errorString());
+    }
+    const auto credentials = StoredCredentials::fromJson(file.readAll());
     if (!credentials) {
-        throw storeError(QStringLiteral("load"), QStringLiteral("it is damaged."));
+        throw storeError(QStringLiteral("read"), QStringLiteral("it is damaged."));
     }
     co_return credentials;
 }
 
-QCoro::Task<> KeychainCredentialStore::save(Account account, StoredCredentials credentials)
+QCoro::Task<> FileCredentialStore::save(Account account, StoredCredentials credentials)
 {
-    QKeychain::WritePasswordJob job(service());
-    job.setAutoDelete(false);
-    job.setKey(accountName(account));
-    job.setBinaryData(credentials.toJson());
-    job.start();
-    co_await qCoro(&job, &QKeychain::Job::finished);
-    if (job.error() != QKeychain::NoError) {
-        throw storeError(QStringLiteral("save"), job.errorString());
+    if (account != Account::Playback) {
+        co_return;
     }
+    const QString path = storePath();
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        throw storeError(QStringLiteral("write"), QStringLiteral("its folder could not be made."));
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        throw storeError(QStringLiteral("write"), file.errorString());
+    }
+    if (file.write(credentials.toJson()) < 0) {
+        throw storeError(QStringLiteral("write"), file.errorString());
+    }
+    file.close();
+    QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    co_return;
 }
 
-QCoro::Task<> KeychainCredentialStore::removeAll()
+QCoro::Task<> FileCredentialStore::removeAll()
 {
-    for (const Account account : {Account::Playback, Account::Library}) {
-        QKeychain::DeletePasswordJob job(service());
-        job.setAutoDelete(false);
-        job.setKey(accountName(account));
-        job.start();
-        co_await qCoro(&job, &QKeychain::Job::finished);
-        if (job.error() != QKeychain::NoError && job.error() != QKeychain::EntryNotFound) {
-            throw storeError(QStringLiteral("delete"), job.errorString());
-        }
+    const QString path = storePath();
+    if (QFile::exists(path) && !QFile::remove(path)) {
+        throw storeError(QStringLiteral("remove"), QStringLiteral("the file is still there."));
     }
+    co_return;
 }
 
 QCoro::Task<std::optional<StoredCredentials>> MemoryCredentialStore::load(Account account)

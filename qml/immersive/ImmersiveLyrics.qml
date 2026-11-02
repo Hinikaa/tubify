@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
-import Swiftify
+import Tubify
 
 // the immersive lyrics (FullscreenLyrics): large bold lines, the sung one
 // bright and glowing in the cover's first colour, kept in the middle, the

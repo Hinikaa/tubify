@@ -741,9 +741,20 @@ QCoro::Task<> LibraryStore::runAlbumLoad(Album album, CancelToken token)
     m_songLoad.finish(token);
 }
 
+void LibraryStore::expandArtistSongs()
+{
+    if (m_showAllArtistSongs) {
+        return;
+    }
+    m_showAllArtistSongs = true;
+    emit showAllArtistSongsChanged();
+}
+
 void LibraryStore::selectArtist(const Artist &artist)
 {
     cancelDetailLoads();
+    m_showAllArtistSongs = false;
+    emit showAllArtistSongsChanged();
     const ArtistDetail *opened = m_openedArtists.find(artist.id);
     navigate({Page::Artist, {}, {}, artist});
     m_artistAlbums->setItems(opened ? opened->albums : QList<Album> {});

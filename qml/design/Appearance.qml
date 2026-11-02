@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // design tokens, after end4's Appearance.qml: rounding, type, motion curves and
 // sizes. colours live in Theme (C++), which follows the system scheme.

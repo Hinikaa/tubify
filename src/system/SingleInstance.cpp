@@ -52,7 +52,7 @@ SingleInstance::SingleInstance(QObject *parent)
 
 QString SingleInstance::serverName()
 {
-    return QStringLiteral("swiftify-") + QDir::home().dirName();
+    return QStringLiteral("tubify-") + QDir::home().dirName();
 }
 
 bool SingleInstance::forwardToRunningInstance(const QStringList &arguments)

@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // a material 3 common button: filled, tonal, outlined, text or elevated, with
 // an optional leading symbol. Buttons keep their pill shape while pressing;

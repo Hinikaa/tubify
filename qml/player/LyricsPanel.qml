@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
 // the lyrics column (LyricsPanel): the current line full size and bright, the
 // rest smaller and faded, kept in the middle as the song moves. a line seeks

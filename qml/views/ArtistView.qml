@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
 // an artist (ArtistDetailView): top songs, then albums and singles
 Flickable {
@@ -99,22 +99,37 @@ Flickable {
             }
         }
 
-        TitleText {
+        Row {
             x: root.margin
+            width: root.width - 2 * root.margin
             Reveal.shown: Library.artistTopSongs.count > 0
-            bottomPadding: 10
-            text: qsTr("Top Songs")
-            font.pixelSize: Appearance.fontSize.title
-            font.weight: Font.Bold
+            spacing: 12
+            height: implicitHeight + 10
+
+            TitleText {
+                text: qsTr("Top Songs")
+                font.pixelSize: Appearance.fontSize.title
+                font.weight: Font.Bold
+            }
+            TextButton {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: Library.artistTopSongs.count > 5 && !Library.showAllArtistSongs
+                variant: TextButton.Text
+                text: qsTr("Show All")
+                onClicked: Library.expandArtistSongs()
+            }
         }
 
         Repeater {
             model: Library.artistTopSongs
 
             SongRow {
+                required property int index
                 x: root.margin
                 width: root.width - 2 * root.margin
                 songs: Library.artistTopSongs
+                visible: Library.showAllArtistSongs || index < 5
+                height: visible ? implicitHeight : 0
             }
         }
 

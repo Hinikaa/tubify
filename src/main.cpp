@@ -89,7 +89,7 @@
 #include <cstdlib>
 #endif
 
-Q_IMPORT_QML_PLUGIN(SwiftifyPlugin)
+Q_IMPORT_QML_PLUGIN(TubifyPlugin)
 
 using namespace swiftify;
 
@@ -231,11 +231,11 @@ void setupAudioEnvironment()
 {
     if (!qEnvironmentVariableIsSet("PIPEWIRE_ALSA")) {
         qputenv("PIPEWIRE_ALSA",
-                "{ application.name=\"Swiftify\" application.icon-name=\"swiftify\" node.name=\"Swiftify\" "
-                "node.description=\"Swiftify\" media.name=\"Playback\" media.role=\"music\" }");
+                "{ application.name=\"Tubify\" application.icon-name=\"tubify\" node.name=\"Tubify\" "
+                "node.description=\"Tubify\" media.name=\"Playback\" media.role=\"music\" }");
     }
     if (!qEnvironmentVariableIsSet("PULSE_PROP")) {
-        qputenv("PULSE_PROP", "application.name=Swiftify application.icon_name=swiftify media.role=music");
+        qputenv("PULSE_PROP", "application.name=Tubify application.icon_name=tubify media.role=music");
     }
 }
 #endif
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     setupAudioEnvironment();
 #endif
     tuneSceneGraph();
-    QGuiApplication::setApplicationName(QStringLiteral("Swiftify"));
+    QGuiApplication::setApplicationName(QStringLiteral("Tubify"));
     QGuiApplication::setApplicationVersion(QStringLiteral(SWIFTIFY_VERSION));
     // the wayland app id, which hyprland window rules and the .desktop file match.
     QGuiApplication::setDesktopFileName(QStringLiteral("swiftify"));
@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 #endif
 #ifndef Q_OS_MACOS
     // x11 shows this; wayland goes by the desktop entry, macos by the bundle
-    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/Swiftify/resources/swiftify-icon.png")));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/Tubify/resources/tubify-icon.png")));
 #endif
 
     SingleInstance instance;
@@ -318,15 +318,17 @@ int main(int argc, char *argv[])
     const auto applyStreaming = [&] {
         core.setStreamQuality(settings.streamingQuality());
         core.setVolumeNormalization(settings.normalizeVolume());
+        core.setAdBlock(settings.adBlock());
         core.setAudioCache(paths::cacheDirectory() + QStringLiteral("/songs"),
                            qint64(settings.songCacheMegabytes()) * 1000 * 1000);
     };
     applyStreaming();
     QObject::connect(&settings, &Settings::streamingQualityChanged, &core, applyStreaming);
     QObject::connect(&settings, &Settings::normalizeVolumeChanged, &core, applyStreaming);
+    QObject::connect(&settings, &Settings::adBlockChanged, &core, applyStreaming);
     QObject::connect(&settings, &Settings::songCacheMegabytesChanged, &core, applyStreaming);
-    KeychainCredentialStore credentials;
-    SpotifySession session(&core, &credentials, &network, &errors);
+    FileCredentialStore credentials;
+    SpotifySession session(&core, &credentials, &errors);
     PlaybackController player(&core, &session, &settings, &errors);
     DiscordPresence discord(&player, &settings);
     LibraryStore library(&session, &settings, &errors);
@@ -381,7 +383,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("art"), new ArtworkImageProvider);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &application,
                      [] { QCoreApplication::exit(EXIT_FAILURE); }, Qt::QueuedConnection);
-    engine.loadFromModule("Swiftify", "Main");
+    engine.loadFromModule("Tubify", "Main");
     // the first launch carries out its own command too, once the window exists
     if (const QString command = SingleInstance::commandFrom(QCoreApplication::arguments()); command != QLatin1StringView("raise")) {
         app.handleCommand(command);

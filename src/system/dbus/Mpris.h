@@ -100,8 +100,8 @@ public:
     bool canQuit() const { return true; }
     bool canRaise() const { return true; }
     bool hasTrackList() const { return false; }
-    QString identity() const { return QStringLiteral("Swiftify"); }
-    QString desktopEntry() const { return QStringLiteral("swiftify"); }
+    QString identity() const { return QStringLiteral("Tubify"); }
+    QString desktopEntry() const { return QStringLiteral("tubify"); }
     QStringList supportedUriSchemes() const { return {}; }
     QStringList supportedMimeTypes() const { return {}; }
 

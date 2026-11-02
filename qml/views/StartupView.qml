@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,9 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
-// while the saved login is checked (SpotifyStartupLoadingView)
+// while the saved login is checked (YouTube MusicStartupLoadingView)
 Item {
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -61,7 +61,7 @@ Item {
 
             Image {
                 anchors.fill: parent
-                source: "qrc:/qt/qml/Swiftify/resources/swiftify-icon.png"
+                source: "qrc:/qt/qml/Tubify/resources/tubify-icon.png"
                 sourceSize: Qt.size(128, 128)
                 smooth: true
             }
@@ -69,7 +69,7 @@ Item {
 
         TitleText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Swiftify"
+            text: "Tubify"
             font.pixelSize: Appearance.fontSize.headline
             font.weight: Font.Bold
         }
@@ -82,7 +82,7 @@ Item {
 
         StyledText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr("Checking your saved Spotify login…")
+            text: qsTr("Checking your saved YouTube Music login…")
             color: Appearance.colors.onSurfaceVariant
         }
     }

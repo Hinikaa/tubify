@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // two soft, offset shadows in a cover's own colours behind its artwork
 // (ArtworkGlow.swift). sdf shadows: no layer, and nothing redraws while still.

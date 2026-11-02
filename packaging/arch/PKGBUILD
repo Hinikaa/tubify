@@ -1,8 +1,8 @@
 # Builds the checkout this file sits in: run `makepkg -si` from this folder.
-pkgname=swiftify
+pkgname=tubify
 pkgver=0.1.1
 pkgrel=1
-pkgdesc='A Spotify player for Wayland, in Material 3 after end4'
+pkgdesc='A YouTube Music player for Wayland, in Material 3 after end4'
 arch=('x86_64' 'aarch64')
 license=('GPL-3.0-or-later')
 depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'qt6-websockets' 'qtkeychain-qt6' 'qcoro' 'libpulse'

@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // the equalizer's response (EqualizerCurve): each band as a gaussian bump,
 // summed, so the line reads as what the ear gets rather than as ten points.

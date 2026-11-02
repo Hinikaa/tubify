@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // the seek line: a wave while playing, a slim track at rest, thicker with a
 // handle while hovered or dragged. a drag commits on release, and only for the

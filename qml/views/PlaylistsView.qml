@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
 // My Playlists, or the pinned ones (PlaylistGridView / PinnedPlaylistsView):
 // an adaptive grid of 180-240 px tiles. `local`, it is Local Files: the

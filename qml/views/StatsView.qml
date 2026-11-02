@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
 // what the person has been listening to (listening-stats for spicetify):
 // the figures of a period, the top songs, artists, albums and genres, when
@@ -199,7 +199,7 @@ Flickable {
                     text: root.usesStatsFm
                           ? (Stats.profileName.length > 0 ? qsTr("%1 on stats.fm").arg(Stats.profileName) : qsTr("From stats.fm"))
                             + (Stats.isPlus ? " · Plus" : "")
-                          : qsTr("Played in Swiftify") + " · " + (Stats.historyCount === 1 ? qsTr("%n play", "", Stats.historyCount) : qsTr("%n plays", "", Stats.historyCount))
+                          : qsTr("Played in Tubify") + " · " + (Stats.historyCount === 1 ? qsTr("%n play", "", Stats.historyCount) : qsTr("%n plays", "", Stats.historyCount))
                             + (Stats.tracking ? "" : " · " + qsTr("tracking paused"))
                     color: Appearance.colors.onSurfaceVariant
                 }
@@ -306,7 +306,7 @@ Flickable {
             StyledText {
                 width: parent.width
                 topPadding: 4
-                text: qsTr("stats.fm sees what Spotify records as played. If songs played in Swiftify do not show up there, the stats from this computer still count them.")
+                text: qsTr("stats.fm sees what YouTube Music records as played. If songs played in Tubify do not show up there, the stats from this computer still count them.")
                 wrapMode: Text.Wrap
                 font.pixelSize: Appearance.fontSize.smaller
                 color: Appearance.colors.outline

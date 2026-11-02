@@ -41,7 +41,7 @@ QDBusObjectPath trackPath(const Song &song)
     // person's own goes by a hash of where it is
     const QString id = song.isLocalFile() ? QStringLiteral("local_") + QString::number(qHash(song.uri), 16)
                                           : song.spotifyId();
-    return QDBusObjectPath(QStringLiteral("/dev/addenator/swiftify/track/") + id);
+    return QDBusObjectPath(QStringLiteral("/dev/hinika/tubify/track/") + id);
 }
 
 } // namespace
@@ -55,7 +55,7 @@ Mpris::Mpris(PlaybackController *player, QObject *parent)
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.isConnected()) {
-        qCInfo(lcMpris) << "no session bus; media keys will not reach swiftify";
+        qCInfo(lcMpris) << "no session bus; media keys will not reach Tubify";
         return;
     }
     if (!bus.registerObject(kObjectPath, this)) {
@@ -63,8 +63,8 @@ Mpris::Mpris(PlaybackController *player, QObject *parent)
         return;
     }
     // a second copy of swiftify would clash on the plain name.
-    m_registered = bus.registerService(QStringLiteral("org.mpris.MediaPlayer2.swiftify"))
-        || bus.registerService(QStringLiteral("org.mpris.MediaPlayer2.swiftify.instance%1").arg(QCoreApplication::applicationPid()));
+    m_registered = bus.registerService(QStringLiteral("org.mpris.MediaPlayer2.tubify"))
+        || bus.registerService(QStringLiteral("org.mpris.MediaPlayer2.tubify.instance%1").arg(QCoreApplication::applicationPid()));
 
     connect(m_player, &PlaybackController::mediaStateChanged, this, &Mpris::update);
     connect(m_player, &PlaybackController::durationChanged, this, &Mpris::update);
@@ -146,7 +146,7 @@ QVariantMap Mpris::metadata() const
         {QStringLiteral("mpris:trackid"), QVariant::fromValue(trackPath(song))},
         {QStringLiteral("xesam:title"), song.name},
         {QStringLiteral("xesam:artist"), artists},
-        {QStringLiteral("xesam:url"), QStringLiteral("https://open.spotify.com/track/") + song.spotifyId()},
+        {QStringLiteral("xesam:url"), QStringLiteral("https://music.youtube.com/watch?v=") + song.spotifyId()},
     };
     if (!song.albumName.isEmpty()) {
         map.insert(QStringLiteral("xesam:album"), song.albumName);

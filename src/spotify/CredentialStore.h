@@ -1,6 +1,6 @@
 /*
- * Swiftify, a spotify player for desktop
- * Copyright (C) 2026  shred0s
+ * Tubify, a YouTube Music player for desktop
+ * Copyright (C) 2026  Hinika
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <QDateTime>
 #include <QHash>
 #include <QString>
 #include <QCoroTask>
@@ -27,29 +26,16 @@
 
 namespace swiftify {
 
-/// a saved login. the json the apple apps keep in their keychain, and more
-/// that they ignore.
+/// the login the core hands back: the cookie and the account it belongs to,
+/// as json. keeping it means the next launch needs no cookie again.
 struct StoredCredentials {
-    QString clientId;
-    /// spotify rotates it on every refresh and revokes it if an old one is
-    /// used again, so it is spent as rarely as possible
-    QString refreshToken;
-    /// 0 when an old build saved it without one
-    int authorizationVersion = 0;
-    /// playback only: librespot's own login for the session (its reusable
-    /// credentials), which reconnects spending no refresh token at all
-    QString playbackLogin;
-    /// the access token last issued and when it runs out: a launch inside
-    /// its hour uses it instead of spending the refresh token
-    QString accessToken;
-    QDateTime accessTokenExpiration;
+    QString login;
 
     QByteArray toJson() const;
     static std::optional<StoredCredentials> fromJson(const QByteArray &json);
 };
 
-/// where the two refresh tokens live. throws SpotifyError when the store
-/// itself fails; a login that was never saved is nullopt.
+/// where the login lives. a login that was never saved is nullopt.
 class CredentialStore {
 public:
     enum class Account { Playback, Library };
@@ -59,21 +45,12 @@ public:
     virtual QCoro::Task<> save(Account account, StoredCredentials credentials) = 0;
     virtual QCoro::Task<> removeAll() = 0;
 
-    /// the keychain item names the apple apps use. a development build on a mac
-    /// would otherwise share (and rotate) the swift app's own login.
-    static QString service()
-    {
-#ifdef Q_OS_MACOS
-        return QStringLiteral("dev.addenator.Swiftify.spotify.qt-development");
-#else
-        return QStringLiteral("dev.addenator.Swiftify.spotify");
-#endif
-    }
+    static QString service();
     static QString accountName(Account account);
 };
 
-/// the secret service (gnome keyring, kwallet, keepassxc) through qtkeychain.
-class KeychainCredentialStore : public CredentialStore {
+/// a json file in the app's data directory, readable only by its owner.
+class FileCredentialStore : public CredentialStore {
 public:
     QCoro::Task<std::optional<StoredCredentials>> load(Account account) override;
     QCoro::Task<> save(Account account, StoredCredentials credentials) override;

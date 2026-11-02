@@ -132,6 +132,7 @@ class LibraryStore : public QObject {
     Q_PROPERTY(swiftify::SongListModel *albumSongs READ albumSongs CONSTANT FINAL)
     Q_PROPERTY(swiftify::SongListModel *artistTopSongs READ artistTopSongs CONSTANT FINAL)
     Q_PROPERTY(swiftify::AlbumListModel *artistAlbums READ artistAlbums CONSTANT FINAL)
+    Q_PROPERTY(bool showAllArtistSongs READ showAllArtistSongs NOTIFY showAllArtistSongsChanged FINAL)
 
     Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY searchChanged FINAL)
     Q_PROPERTY(bool searchIsCatchphrase READ searchIsCatchphrase NOTIFY searchChanged FINAL)
@@ -211,6 +212,7 @@ public:
     AlbumListModel *recommendedAlbums() const { return m_recommendedAlbums; }
     SongListModel *albumSongs() const { return m_albumSongs; }
     SongListModel *artistTopSongs() const { return m_artistTopSongs; }
+    bool showAllArtistSongs() const { return m_showAllArtistSongs; }
     AlbumListModel *artistAlbums() const { return m_artistAlbums; }
 
     QString searchQuery() const { return m_searchQuery; }
@@ -255,6 +257,7 @@ public:
     Q_INVOKABLE void selectPlaylistById(const QString &id);
     Q_INVOKABLE void selectAlbum(const swiftify::Album &album);
     Q_INVOKABLE void selectArtist(const swiftify::Artist &artist);
+    Q_INVOKABLE void expandArtistSongs();
     Q_INVOKABLE void goToAlbum(const swiftify::Song &song);
     Q_INVOKABLE void goToArtist(const swiftify::Song &song);
     Q_INVOKABLE void goBack();
@@ -290,6 +293,7 @@ public:
     void recordSearchPlayback(const Song &song);
 
 signals:
+    void showAllArtistSongsChanged();
     void destinationChanged();
     void selectedPlaylistChanged();
     void profileChanged();
@@ -391,6 +395,7 @@ private:
     AlbumListModel *m_recommendedAlbums;
     SongListModel *m_albumSongs;
     SongListModel *m_artistTopSongs;
+    bool m_showAllArtistSongs = false;
     AlbumListModel *m_artistAlbums;
 
     QString m_searchQuery;

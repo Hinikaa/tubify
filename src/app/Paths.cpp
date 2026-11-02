@@ -36,13 +36,13 @@ QString ensured(const QString &path)
 QString dataDirectory()
 {
     return ensured(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                   + QStringLiteral("/Swiftify"));
+                   + QStringLiteral("/Tubify"));
 }
 
 QString cacheDirectory()
 {
     return ensured(QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                   + QStringLiteral("/Swiftify"));
+                   + QStringLiteral("/Tubify"));
 }
 
 QString logDirectory()
@@ -52,7 +52,7 @@ QString logDirectory()
 
 QString logFilePath()
 {
-    return logDirectory() + QStringLiteral("/swiftify.log");
+    return logDirectory() + QStringLiteral("/tubify.log");
 }
 
 } // namespace swiftify::paths

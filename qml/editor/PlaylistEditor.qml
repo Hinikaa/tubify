@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Dialogs
-import Swiftify
+import Tubify
 
 // a new playlist, or the open one's details (PlaylistEditorSheet): a cover
 // from the carousel, either a photo framed in the cropper or one of ten

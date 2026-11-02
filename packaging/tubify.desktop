@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Tubify
+GenericName=Music Player
+Comment=Play your YouTube Music library
+Exec=swiftify
+Icon=tubify
+Terminal=false
+Categories=AudioVideo;Audio;Player;Qt;
+Keywords=youtube;music;player;lyrics;
+StartupWMClass=swiftify
+Actions=Immersive;PlayPause;
+
+[Desktop Action Immersive]
+Name=Immersive Player
+Exec=swiftify --immersive
+
+[Desktop Action PlayPause]
+Name=Play/Pause
+Exec=swiftify --play-pause

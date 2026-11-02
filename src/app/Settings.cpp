@@ -57,8 +57,8 @@ T stored(const QSettings &store, const char *key, const T &fallback)
 
 Settings::Settings(QObject *parent)
     : QObject(parent)
-    , m_store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("Swiftify"),
-              QStringLiteral("Swiftify"))
+    , m_store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("Tubify"),
+              QStringLiteral("Tubify"))
 {
     load();
     if (!s_instance) {
@@ -145,6 +145,7 @@ void Settings::load()
         m_songCacheMegabytes = cache == 500 || cache == 2000 ? cache : 1000;
     }
     m_normalizeVolume = stored<bool>(m_store, "normalizeVolume", m_normalizeVolume);
+    m_adBlock = stored<bool>(m_store, "adBlock", m_adBlock);
     m_crossfadeEnabled = stored<bool>(m_store, "crossfadeEnabled", m_crossfadeEnabled);
     m_crossfadeDurationSeconds = std::clamp(
         stored<int>(m_store, "crossfadeDurationSeconds", m_crossfadeDurationSeconds), 1, 12);
@@ -332,6 +333,16 @@ void Settings::setNormalizeVolume(bool value)
     m_normalizeVolume = value;
     m_store.setValue(QStringLiteral("normalizeVolume"), value);
     emit normalizeVolumeChanged();
+}
+
+void Settings::setAdBlock(bool value)
+{
+    if (m_adBlock == value) {
+        return;
+    }
+    m_adBlock = value;
+    m_store.setValue(QStringLiteral("adBlock"), value);
+    emit adBlockChanged();
 }
 
 void Settings::setSongCacheMegabytes(int megabytes)

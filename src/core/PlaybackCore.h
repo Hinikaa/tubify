@@ -23,10 +23,11 @@
 #include <QStringList>
 #include <QCoroTask>
 
+#include "spotify/SpotifyError.h"
 #include "spotify/SpotifyTypes.h"
 
-/// audio another program plays, as the rust core takes it (swiftify_core.h)
-struct SwiftifyLiveBuffer;
+/// audio another program plays, as the rust core takes it (tubify_core.h)
+struct TubifyLiveBuffer;
 
 namespace swiftify {
 
@@ -66,6 +67,12 @@ public:
     /// an artist's top songs read through the session, shaped like the web
     /// api's top tracks response, which spotify took away
     virtual QCoro::Task<QString> artistTopTracksJson(QString artistUri) = 0;
+    /// one YouTube Music library operation. `op` names it and `args` is its
+    /// json object; the answer comes back as json.
+    virtual QCoro::Task<QString> apiRequest(QString /*op*/, QString /*args*/)
+    {
+        throw SpotifyError(SpotifyError::Kind::Core, QStringLiteral("this core has no library."));
+    }
 
     virtual void play() = 0;
     virtual void pause() = 0;
@@ -74,6 +81,9 @@ public:
     virtual float volume() const = 0;
     virtual void setStreamQuality(int kbps) = 0;
     virtual void setVolumeNormalization(bool enabled) = 0;
+    /// filters sponsored shelves and ad placements from every library answer
+    virtual void setAdBlock(bool /*enabled*/) {}
+    virtual bool adBlock() const { return true; }
     /// keeps streamed songs in `path`, up to `limitBytes`; both apply the
     /// next time playback connects
     virtual void setAudioCache(const QString &path, qint64 limitBytes) = 0;
@@ -90,7 +100,7 @@ public:
     /// plays what is pushed into `buffer` through the equalizer and the
     /// analyser, in place of whatever played; one already playing carries on.
     /// false if this core can't, or failed to
-    virtual bool playLiveBuffer(SwiftifyLiveBuffer *) { return false; }
+    virtual bool playLiveBuffer(TubifyLiveBuffer *) { return false; }
     virtual void stopLiveBuffer() {}
     /// the rate live audio plays at without being resampled; 0 if unknown
     virtual quint32 liveOutputRate() const { return 0; }

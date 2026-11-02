@@ -18,9 +18,9 @@
 
 cmake_minimum_required(VERSION 3.24)
 
-project(Swiftify
+project(Tubify
     VERSION 0.25.1
-    DESCRIPTION "A native Spotify client"
+    DESCRIPTION "A native YouTube Music client"
     LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -59,7 +59,7 @@ endif()
 option(SWIFTIFY_DESKTOP_INTEGRATION "Build the Linux desktop integration" ${SWIFTIFY_IS_LINUX})
 # spotify soloist plays spotify's songs for accounts spotify no longer gives
 # librespot the keys for.
-option(SWIFTIFY_SOLOIST "Play Spotify songs through Spotify Soloist when it is installed" ON)
+option(SWIFTIFY_SOLOIST "Play Spotify songs through Spotify Soloist when it is installed" OFF)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS
     Core Gui Network Concurrent Qml Quick QuickControls2 ShaderTools)
@@ -75,31 +75,38 @@ if(SWIFTIFY_DESKTOP_INTEGRATION)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(PULSE REQUIRED IMPORTED_TARGET libpulse)
 endif()
-if(SWIFTIFY_SOLOIST)
-    find_package(Qt6 6.10 REQUIRED COMPONENTS WebSockets)
-endif()
-find_package(Qt6Keychain REQUIRED)
 if(WIN32)
     find_package(Qt6 6.10 REQUIRED COMPONENTS Widgets)
 endif()
-find_package(QCoro6 0.10 REQUIRED COMPONENTS Core Network)
+find_package(QCoro6 0.10 QUIET COMPONENTS Core Network)
+if(NOT QCoro6_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(qcoro
+        GIT_REPOSITORY https://github.com/qcoro/qcoro.git
+        GIT_TAG v0.13.0)
+    set(QCORO_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(QCORO_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(QCORO_WITH_QTWEBSOCKETS OFF CACHE BOOL "" FORCE)
+    set(QCORO_WITH_QML OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(qcoro)
+endif()
 qcoro_enable_coroutines()
 
 qt_standard_project_setup(REQUIRES 6.10)
-# modules get their own folder so tooling finds them as <dir>/Swiftify/qmldir,
+# modules get their own folder so tooling finds them as <dir>/Tubify/qmldir,
 # clear of the executable (the same name on a case-insensitive disk).
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml_modules)
 
-# --- spotify-core (Rust) -----------------------------------------------------
+# --- ytmusic-core (Rust) -----------------------------------------------------
 
 # the core sits inside this folder in swiftify-linux, and beside it in the
 # swiftify repository with the apple apps
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/spotify-core/Cargo.toml)
-    set(SWIFTIFY_CORE_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/spotify-core)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ytmusic-core/Cargo.toml)
+    set(SWIFTIFY_CORE_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/ytmusic-core)
 else()
-    set(SWIFTIFY_CORE_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/../spotify-core)
+    set(SWIFTIFY_CORE_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/../ytmusic-core)
 endif()
-set(SWIFTIFY_CORE_DIR ${SWIFTIFY_CORE_DEFAULT} CACHE PATH "The Rust core, spotify-core")
+set(SWIFTIFY_CORE_DIR ${SWIFTIFY_CORE_DEFAULT} CACHE PATH "The Rust core, ytmusic-core")
 
 include(FetchContent)
 FetchContent_Declare(Corrosion
@@ -112,26 +119,26 @@ corrosion_import_crate(
     CRATE_TYPES staticlib
     NO_DEFAULT_FEATURES
     FEATURES capi)
-target_include_directories(spotify_core INTERFACE
+target_include_directories(ytmusic_core INTERFACE
     ${SWIFTIFY_CORE_DIR}/include)
 # what rustc reports as the staticlib's native dependencies
 # (cargo rustc -- --print native-static-libs).
 if(APPLE)
-    target_link_libraries(spotify_core INTERFACE
+    target_link_libraries(ytmusic_core INTERFACE
         "-framework AudioToolbox" "-framework CoreAudio" "-framework IOKit"
         "-framework CoreFoundation" "-framework Foundation" "-framework SystemConfiguration"
         "-framework Security" objc iconv)
 elseif(WIN32)
     # windows: wasapi for audio, schannel for tls, and what rust's std
     # needs; the linker leaves out any of them nothing uses
-    target_link_libraries(spotify_core INTERFACE
+    target_link_libraries(ytmusic_core INTERFACE
         ws2_32 userenv bcrypt ntdll advapi32 kernel32 user32 shell32 ole32 oleaut32
         propsys crypt32 secur32 ncrypt runtimeobject synchronization)
 else()
     find_package(ALSA REQUIRED)
     find_package(OpenSSL REQUIRED)
     find_package(Threads REQUIRED)
-    target_link_libraries(spotify_core INTERFACE
+    target_link_libraries(ytmusic_core INTERFACE
         ALSA::ALSA OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${CMAKE_DL_LIBS} m)
 endif()
 
@@ -157,7 +164,7 @@ if(SWIFTIFY_DOWNLOAD_ICON_FONT)
         "${SWIFTIFY_ICON_FONT}"
         95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca)
     if(NOT APPLE)
-        install(FILES ${SWIFTIFY_ICON_FONT} DESTINATION ${CMAKE_INSTALL_DATADIR}/swiftify/fonts)
+        install(FILES ${SWIFTIFY_ICON_FONT} DESTINATION ${CMAKE_INSTALL_DATADIR}/tubify/fonts)
     endif()
     # the font's list of names, from the same commit: the tests check every
     # symbol the qml asks for is in it, since a misspelt one shows as text
@@ -188,7 +195,7 @@ if(SWIFTIFY_DOWNLOAD_INTERFACE_FONT)
         fc13d69f63e36d284b6e383d4d1463d8ad404f0aa065e57cf961252d51063137)
     if(NOT APPLE)
         install(FILES ${SWIFTIFY_INTERFACE_FONT} ${SWIFTIFY_INTERFACE_FONT_LICENSE}
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/swiftify/fonts)
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/tubify/fonts)
     endif()
 endif()
 
@@ -205,7 +212,7 @@ configure_file(third_party/rounded-polygon-qmljs/LICENSE
 set(SWIFTIFY_THIRD_PARTY_LICENSES
     ${SWIFTIFY_LICENSE_DIRECTORY}/material-color-utilities.LICENSE
     ${SWIFTIFY_LICENSE_DIRECTORY}/rounded-polygon-qmljs.LICENSE
-    # the rust crates', made with cargo about (spotify-core/about.toml)
+    # the rust crates', made with cargo about (ytmusic-core/about.toml)
     ${CMAKE_CURRENT_SOURCE_DIR}/packaging/licenses/rust-crates.LICENSE)
 # material symbols, the icon font downloaded above
 if(SWIFTIFY_DOWNLOAD_ICON_FONT)
@@ -268,11 +275,11 @@ qt_add_resources(swiftify_app "swiftify_translations"
     BASE translations
     FILES translations/ru.json)
 qt_add_qml_module(swiftify_app
-    URI Swiftify
+    URI Tubify
     VERSION 1.0
     SOURCES ${SWIFTIFY_SOURCES}
     QML_FILES ${SWIFTIFY_QML}
-    RESOURCES resources/swiftify-icon.png resources/cameo.png
+    RESOURCES resources/tubify-icon.png resources/cameo.png
     DEPENDENCIES QtQuick)
 # BATCHABLE: the spectrum's material can be merged into the scene graph's
 # batches, which needs the extra vertex input qsb adds for it.
@@ -353,9 +360,8 @@ endif()
 target_link_libraries(swiftify_app PUBLIC
     Qt6::Core Qt6::Gui Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Quick Qt6::QuickControls2
     QCoro6::Core QCoro6::Network
-    qt6keychain
     material_color_utilities
-    spotify_core)
+    ytmusic_core)
 
 if(WIN32)
     target_link_libraries(swiftify_app PUBLIC Qt6::Widgets comctl32 dwmapi ole32 shell32 uuid runtimeobject mmdevapi)
@@ -389,7 +395,7 @@ if(WIN32)
     if(SWIFTIFY_HAVE_SMTC)
         target_compile_definitions(swiftify_app PRIVATE SWIFTIFY_HAVE_SMTC)
     else()
-        message(WARNING "This toolchain's windows.media.h has no SystemMediaTransportControls, so Swiftify is "
+        message(WARNING "This toolchain's windows.media.h has no SystemMediaTransportControls, so Tubify is "
             "building without the Windows media controls (media overlay, lock screen, media keys). "
             "Build with MSVC, or a newer mingw-w64, for them; see the Windows section of README.md.")
     endif()
@@ -404,9 +410,9 @@ endif()
 # in its resources so explorer and a pinned taskbar button show it
 set_target_properties(swiftify PROPERTIES WIN32_EXECUTABLE ON)
 if(WIN32)
-    set_source_files_properties(packaging/icons/swiftify.rc
-        PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/swiftify.ico)
-    target_sources(swiftify PRIVATE packaging/icons/swiftify.rc)
+    set_source_files_properties(packaging/icons/tubify.rc
+        PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico)
+    target_sources(swiftify PRIVATE packaging/icons/tubify.rc)
 endif()
 if(MINGW)
     # qt's WinMain shim reads msvcrt's __argc, which a mingw on ucrt (as
@@ -447,13 +453,13 @@ if(APPLE)
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png ${SWIFTIFY_ICONSET}/icon_32x32.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-64.png ${SWIFTIFY_ICONSET}/icon_32x32@2x.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-128.png ${SWIFTIFY_ICONSET}/icon_128x128.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-256.png ${SWIFTIFY_ICONSET}/icon_128x128@2x.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-256.png ${SWIFTIFY_ICONSET}/icon_256x256.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-256.png ${SWIFTIFY_ICONSET}/icon_128x128@2x.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-256.png ${SWIFTIFY_ICONSET}/icon_256x256.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png ${SWIFTIFY_ICONSET}/icon_256x256@2x.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png ${SWIFTIFY_ICONSET}/icon_512x512.png
             COMMAND iconutil --convert icns --output ${SWIFTIFY_ICNS} ${SWIFTIFY_ICONSET}
             DEPENDS ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png ${SWIFTIFY_ICON_SOURCE}/swiftify-64.png
-                ${SWIFTIFY_ICON_SOURCE}/swiftify-128.png ${SWIFTIFY_ICON_SOURCE}/swiftify-256.png
+                ${SWIFTIFY_ICON_SOURCE}/swiftify-128.png ${SWIFTIFY_ICON_SOURCE}/tubify-256.png
                 ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png
             COMMENT "Making the app icon")
         set(SWIFTIFY_ICON_FILES ${SWIFTIFY_ICNS})
@@ -476,8 +482,8 @@ if(APPLE)
     set_target_properties(swiftify PROPERTIES
         MACOSX_BUNDLE ON
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in
-        MACOSX_BUNDLE_BUNDLE_NAME Swiftify
-        MACOSX_BUNDLE_GUI_IDENTIFIER dev.addenator.Swiftify.Qt
+        MACOSX_BUNDLE_BUNDLE_NAME Tubify
+        MACOSX_BUNDLE_GUI_IDENTIFIER dev.hinika.Tubify
         MACOSX_BUNDLE_ICON_FILE swiftify.icns
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
@@ -495,9 +501,6 @@ if(APPLE)
         COMMENT "Signing the app bundle")
 endif()
 
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
 
 install(TARGETS swiftify
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -505,16 +508,16 @@ install(TARGETS swiftify
 # the gpl has to go out with every copy of swiftify, so the tarball and the
 # windows zip carry it here and the app bundle in its resources
 if(NOT APPLE)
-    install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/swiftify)
-    install(FILES ${SWIFTIFY_THIRD_PARTY_LICENSES} DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/swiftify)
+    install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/tubify)
+    install(FILES ${SWIFTIFY_THIRD_PARTY_LICENSES} DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/tubify)
 endif()
 if(NOT APPLE AND NOT WIN32)
     # the desktop entry's name is the wayland app id (see main.cpp), which is
     # how hyprland and the tray match the window to its icon
-    install(FILES packaging/swiftify.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES packaging/tubify.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     foreach(size 32 48 64 128 256 512)
-        install(FILES packaging/icons/swiftify-${size}.png
+        install(FILES packaging/icons/tubify-${size}.png
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
-            RENAME swiftify.png)
+            RENAME tubify.png)
     endforeach()
 endif()

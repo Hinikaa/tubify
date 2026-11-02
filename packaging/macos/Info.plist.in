@@ -12,7 +12,7 @@
     <string>${MACOSX_BUNDLE_ICON_FILE}</string>
     <!-- the icon composer icon in Assets.car, where the build compiled one -->
     <key>CFBundleIconName</key>
-    <string>swiftify</string>
+    <string>tubify</string>
     <key>CFBundleIdentifier</key>
     <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
     <key>CFBundleInfoDictionaryVersion</key>

@@ -1,6 +1,6 @@
 /*
- * Swiftify, a spotify player for desktop
- * Copyright (C) 2026  shred0s
+ * Tubify, a YouTube Music player for desktop
+ * Copyright (C) 2026  Hinika
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <QRegularExpression>
 #include <QStringList>
 #include <QUrl>
+#include <QUrlQuery>
 
 namespace swiftify {
 
@@ -43,15 +44,38 @@ std::optional<SpotifyLink::Kind> kindFromName(const QString &name)
     return std::nullopt;
 }
 
-// Only alphabet and minimum length are checked, an unknown id surfaces as a 404 from the api
 std::optional<SpotifyLink> fromParts(const QString &kindName, const QString &id)
 {
-    static const QRegularExpression idPattern(QStringLiteral("^[A-Za-z0-9]{22,}$"));
+    static const QRegularExpression videoPattern(QStringLiteral("^[A-Za-z0-9_-]{6,}$"));
+    static const QRegularExpression albumPattern(QStringLiteral("^MPRE[A-Za-z0-9_-]+$"));
+    static const QRegularExpression artistPattern(QStringLiteral("^UC[A-Za-z0-9_-]+$"));
+    static const QRegularExpression playlistPattern(QStringLiteral("^(VL|PL|OLAK|RD|LM|SE)[A-Za-z0-9_-]*$"));
     const auto kind = kindFromName(kindName);
-    if (!kind || !idPattern.match(id).hasMatch()) {
+    if (!kind) {
         return std::nullopt;
     }
-    return SpotifyLink{*kind, id};
+    const bool valid = *kind == SpotifyLink::Kind::Track      ? videoPattern.match(id).hasMatch()
+        : *kind == SpotifyLink::Kind::Album                   ? albumPattern.match(id).hasMatch()
+        : *kind == SpotifyLink::Kind::Artist                  ? artistPattern.match(id).hasMatch()
+                                                              : playlistPattern.match(id).hasMatch();
+    if (!valid) {
+        return std::nullopt;
+    }
+    return SpotifyLink {*kind, id};
+}
+
+std::optional<SpotifyLink> fromBrowseId(const QString &browseId)
+{
+    if (browseId.startsWith(QLatin1String("MPRE"))) {
+        return SpotifyLink {SpotifyLink::Kind::Album, browseId};
+    }
+    if (browseId.startsWith(QLatin1String("UC"))) {
+        return SpotifyLink {SpotifyLink::Kind::Artist, browseId};
+    }
+    if (browseId.startsWith(QLatin1String("VL"))) {
+        return SpotifyLink {SpotifyLink::Kind::Playlist, browseId.mid(2)};
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -60,8 +84,7 @@ std::optional<SpotifyLink> parseSpotifyLink(const QString &input)
 {
     const QString text = input.trimmed();
 
-    // Parse URI links, e.g. "spotify:track:{id}"
-    if (text.startsWith(QLatin1String("spotify:"))) {
+    if (text.startsWith(QLatin1String("ytm:"))) {
         const QStringList parts = text.split(QLatin1Char(':'));
         if (parts.size() != 3) {
             return std::nullopt;
@@ -69,24 +92,44 @@ std::optional<SpotifyLink> parseSpotifyLink(const QString &input)
         return fromParts(parts[1], parts[2]);
     }
 
-    // Otherwise parse URL "open.spotify.com/{kind}/{id}" links
     const QUrl url(text);
     if (url.scheme() != QLatin1String("https") && url.scheme() != QLatin1String("http")) {
         return std::nullopt;
     }
-    if (url.host() != QLatin1String("open.spotify.com")) {
+
+    if (url.host() == QLatin1String("youtu.be")) {
+        const QString id = url.path().mid(1).section(QLatin1Char('/'), 0, 0);
+        return fromParts(QStringLiteral("track"), id);
+    }
+    if (url.host() != QLatin1String("music.youtube.com") && url.host() != QLatin1String("www.youtube.com")
+        && url.host() != QLatin1String("youtube.com")) {
         return std::nullopt;
     }
 
+    const QUrlQuery query(url);
+    if (query.hasQueryItem(QStringLiteral("v"))) {
+        return fromParts(QStringLiteral("track"), query.queryItemValue(QStringLiteral("v")));
+    }
+    if (query.hasQueryItem(QStringLiteral("list"))) {
+        QString list = query.queryItemValue(QStringLiteral("list"));
+        if (list.startsWith(QLatin1String("VL"))) {
+            list = list.mid(2);
+        }
+        return fromParts(QStringLiteral("playlist"), list);
+    }
+
     QStringList segments = url.path().split(QLatin1Char('/'), Qt::SkipEmptyParts);
-    // Remove optional locale segment, e.g. /intl-de/
-    if (!segments.isEmpty() && segments.first().startsWith(QLatin1String("intl-"))) {
-        segments.removeFirst();
+    if (!segments.isEmpty() && segments.first() == QLatin1String("browse") && segments.size() == 2) {
+        return fromBrowseId(segments.at(1));
     }
-    if (segments.size() != 2) {
-        return std::nullopt;
+    if (!segments.isEmpty() && segments.first() == QLatin1String("channel") && segments.size() == 2) {
+        return fromParts(QStringLiteral("artist"), segments.at(1));
     }
-    return fromParts(segments[0], segments[1]);
+    if (segments.size() == 2 && (segments.first() == QLatin1String("playlist")
+                                 || segments.first() == QLatin1String("album"))) {
+        return fromParts(segments.first(), segments.at(1));
+    }
+    return std::nullopt;
 }
 
 } // namespace swiftify

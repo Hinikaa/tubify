@@ -109,7 +109,7 @@ void applyEnvironmentVariables()
 void setupLogging()
 {
     QSettings store(QSettings::IniFormat, QSettings::UserScope,
-                    QStringLiteral("Swiftify"), QStringLiteral("Swiftify"));
+                    QStringLiteral("Tubify"), QStringLiteral("Tubify"));
     const bool enabled = store.value(QStringLiteral("loggingEnabled"), false).toBool()
         || qEnvironmentVariableIsSet("SWIFTIFY_LOG");
 
@@ -121,7 +121,7 @@ void setupLogging()
 
     const QString logDir = paths::logDirectory();
     const QString logFile = paths::logFilePath();
-    const QString prevLogFile = logDir + QStringLiteral("/swiftify.prev.log");
+    const QString prevLogFile = logDir + QStringLiteral("/tubify.prev.log");
 
     if (QFile::exists(logFile)) {
         if (QFile::exists(prevLogFile)) {
@@ -210,7 +210,7 @@ void setupLogging()
     s_active = true;
 
     fprintf(stderr, "============================================================\n");
-    fprintf(stderr, "Swiftify %s logging started at %s\n",
+    fprintf(stderr, "Tubify %s logging started at %s\n",
             SWIFTIFY_VERSION,
             QDateTime::currentDateTime().toString(Qt::ISODate).toUtf8().constData());
 #if defined(Q_OS_WIN)

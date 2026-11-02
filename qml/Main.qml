@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import Qt.labs.platform as Platform
-import Swiftify
+import Tubify
 
 // the main window: drawer, a content sheet with the top bar and the page, the
 // inspector beside it, and the player floating over the bottom.
@@ -56,7 +56,7 @@ ApplicationWindow {
         target: Player
         function onPanelsChanged() { window.closeCrowdedPanels() }
     }
-    title: "Swiftify"
+    title: "Tubify"
     // on linux the app draws its whole frame. on macos the content runs under
     // a transparent title bar that keeps the traffic lights and nothing else.
     flags: App.macOS ? Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
@@ -789,8 +789,8 @@ ApplicationWindow {
         sourceComponent: Platform.SystemTrayIcon {
             objectName: "swiftifyTrayIcon"
             visible: true
-            icon.source: "qrc:/qt/qml/Swiftify/resources/swiftify-icon.png"
-            tooltip: Player.hasSong ? Player.currentSong.name + " — " + Player.currentSong.artists : "Swiftify"
+            icon.source: "qrc:/qt/qml/Tubify/resources/tubify-icon.png"
+            tooltip: Player.hasSong ? Player.currentSong.name + " — " + Player.currentSong.artists : "Tubify"
             onActivated: (reason) => {
                 if (reason === Platform.SystemTrayIcon.Trigger || reason === Platform.SystemTrayIcon.DoubleClick) {
                     window.reveal()
@@ -799,7 +799,7 @@ ApplicationWindow {
 
             menu: Platform.Menu {
                 Platform.MenuItem {
-                    text: qsTr("Show Swiftify")
+                    text: qsTr("Show Tubify")
                     onTriggered: window.reveal()
                 }
                 Platform.MenuItem {
@@ -809,7 +809,7 @@ ApplicationWindow {
                 }
                 Platform.MenuSeparator {}
                 Platform.MenuItem {
-                    text: qsTr("Quit Swiftify")
+                    text: qsTr("Quit Tubify")
                     onTriggered: App.quit()
                 }
             }

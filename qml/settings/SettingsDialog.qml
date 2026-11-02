@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Templates as T
-import Swiftify
+import Tubify
 
 // settings, as a sheet over the window rather than a window of its own, laid
 // out like end4's settings app: a navigation rail on the left, and the chosen

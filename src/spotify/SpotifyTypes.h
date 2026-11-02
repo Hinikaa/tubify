@@ -168,7 +168,7 @@ public:
     bool isValid() const { return !id.isEmpty(); }
     bool isLocal() const { return id.startsWith(QLatin1StringView("local:")); }
     bool operator==(const Playlist &) const = default;
-    QString ownerDisplayName() const { return ownerName.isEmpty() ? QStringLiteral("Spotify") : ownerName; }
+    QString ownerDisplayName() const { return ownerName.isEmpty() ? QStringLiteral("YouTube Music") : ownerName; }
     bool canModify(const QString &currentUserId) const
     {
         return isCollaborative || (!currentUserId.isEmpty() && ownerId == currentUserId);

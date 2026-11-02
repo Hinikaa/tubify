@@ -75,7 +75,7 @@ Album Song::albumDestination() const
     album.name = albumName;
     album.artists = artists;
     album.artworkUrl = artworkUrl;
-    album.uri = albumUri.isEmpty() ? QStringLiteral("spotify:album:") + albumId : albumUri;
+    album.uri = albumUri.isEmpty() ? QStringLiteral("ytm:album:") + albumId : albumUri;
     return album;
 }
 

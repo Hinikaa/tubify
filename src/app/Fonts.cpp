@@ -43,7 +43,7 @@ bool loadBundled(const char *family, const char *file)
     }
     const QString applicationDirectory = QCoreApplication::applicationDirPath();
     const QStringList candidates {
-        applicationDirectory + QStringLiteral("/../share/swiftify/fonts/"),
+        applicationDirectory + QStringLiteral("/../share/tubify/fonts/"),
         // inside the macos app bundle
         applicationDirectory + QStringLiteral("/../Resources/fonts/"),
         applicationDirectory + QStringLiteral("/fonts/"),

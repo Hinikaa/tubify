@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
-import Swiftify
+import Tubify
 
 // Search (GlobalSearchView): categories and history when empty, results after.
 Flickable {
@@ -169,7 +169,7 @@ Flickable {
                 spacing: 12
                 LoadingSpinner { anchors.horizontalCenter: parent.horizontalCenter }
                 StyledText {
-                    text: qsTr("Searching Spotify…")
+                    text: qsTr("Searching YouTube Music…")
                     color: Appearance.colors.onSurfaceVariant
                 }
             }

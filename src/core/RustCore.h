@@ -25,13 +25,13 @@
 
 #include <memory>
 
-struct SwiftifyCore;
+struct TubifyCore;
 
 namespace swiftify {
 
 class CoreRequest;
 
-/// spotify-core through its c abi (spotify-core/include/swiftify_core.h).
+/// spotify-core through its c abi (spotify-core/include/tubify_core.h).
 class RustCore : public PlaybackCore {
     Q_OBJECT
 
@@ -55,6 +55,7 @@ public:
     QCoro::Task<QString> lyricsJson(QString spotifyUri) override;
     QCoro::Task<QString> playlistJson(QString playlistUri) override;
     QCoro::Task<QString> artistTopTracksJson(QString artistUri) override;
+    QCoro::Task<QString> apiRequest(QString op, QString args) override;
 
     void play() override;
     void pause() override;
@@ -63,6 +64,8 @@ public:
     float volume() const override;
     void setStreamQuality(int kbps) override;
     void setVolumeNormalization(bool enabled) override;
+    void setAdBlock(bool enabled) override;
+    bool adBlock() const override;
     void setAudioCache(const QString &path, qint64 limitBytes) override;
     void setPlaybackShaping(float tempo, float pitchSemitones, bool preservesPitch) override;
     void setPreampGain(float gainDb) override;
@@ -74,7 +77,7 @@ public:
     quint32 playbackDurationMs() const override;
     bool takeEndOfTrack() override;
 
-    bool playLiveBuffer(SwiftifyLiveBuffer *buffer) override;
+    bool playLiveBuffer(TubifyLiveBuffer *buffer) override;
     void stopLiveBuffer() override;
     quint32 liveOutputRate() const override;
     void analyseLive(const float *samples, qsizetype count, float outputGain) override;
@@ -90,7 +93,7 @@ private:
     template <typename Start>
     QCoro::Task<QString> request(Start start);
 
-    SwiftifyCore *m_core = nullptr;
+    TubifyCore *m_core = nullptr;
     std::unique_ptr<QSocketNotifier> m_notifier;
     QHash<quint64, std::shared_ptr<CoreRequest>> m_pending;
     quint64 m_nextRequestId = 0;

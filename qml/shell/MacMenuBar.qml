@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Qt.labs.platform as Platform
-import Swiftify
+import Tubify
 
 // the mac's menu bar for the main window. its key equivalents are the app's
 // shortcuts, so on macos the window's own Shortcuts for these stand down
@@ -39,7 +39,7 @@ Platform.MenuBar {
         title: qsTr("File")
 
         Platform.MenuItem {
-            text: qsTr("About Swiftify")
+            text: qsTr("About Tubify")
             role: Platform.MenuItem.AboutRole
             onTriggered: UiState.settingsRequested()
         }
@@ -50,7 +50,7 @@ Platform.MenuBar {
             onTriggered: UiState.settingsRequested()
         }
         Platform.MenuItem {
-            text: qsTr("Quit Swiftify")
+            text: qsTr("Quit Tubify")
             role: Platform.MenuItem.QuitRole
             shortcut: StandardKey.Quit
             onTriggered: App.quit()
@@ -246,7 +246,7 @@ Platform.MenuBar {
         }
         Platform.MenuSeparator {}
         Platform.MenuItem {
-            text: "Swiftify"
+            text: "Tubify"
             onTriggered: root.showWindowRequested()
         }
     }

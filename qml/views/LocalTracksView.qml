@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
 // Local Tracks: every music file of the person's own, from the folders and
 // files they added (LocalFiles), with what each file's own tags say about it.
@@ -32,7 +32,7 @@ SongListPage {
     showsEmpty: LocalFiles.songs.count === 0
     emptySymbol: "folder_open"
     emptyTitle: LocalFiles.sources.length === 0 ? qsTr("No Local Files Yet") : qsTr("No Music Found")
-    emptyDescription: LocalFiles.sources.length === 0 ? qsTr("Add a folder of music, or drop files onto the window.") : qsTr("The folders you added hold no music Swiftify can play.")
+    emptyDescription: LocalFiles.sources.length === 0 ? qsTr("Add a folder of music, or drop files onto the window.") : qsTr("The folders you added hold no music Tubify can play.")
 
     MusicPicker {
         id: picker

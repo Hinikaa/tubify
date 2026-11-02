@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
-import Swiftify
+import Tubify
 
 // the macos unified toolbar as a material top app bar: back, the open
 // playlist's actions, a search field, and the playback menu. it has no
@@ -40,7 +40,7 @@ Item {
     readonly property real searchRightEdge: rightControls.x - 8
     // Reserve the collapsed field's space even while its overlay is focused.
     readonly property real reservedSearchWidth: Math.max(40, Math.min(340, searchRightEdge - searchLeftEdge - (onPlaylist ? playlistActions.implicitWidth + 8 : 0)))
-    readonly property string playlistLink: "https://open.spotify.com/playlist/" + Library.selectedPlaylist.id
+    readonly property string playlistLink: "https://music.youtube.com/playlist?list=" + Library.selectedPlaylist.id
 
     function focusSearch() {
         if (search.visible) {
@@ -262,7 +262,7 @@ Item {
                 return 0;
             return editing ? Math.max(40, Math.min(340, root.searchRightEdge - root.searchLeftEdge)) : root.reservedSearchWidth;
         }
-        placeholder: root.searching ? qsTr("Search Spotify") : qsTr("Find in Playlist")
+        placeholder: root.searching ? qsTr("Search YouTube Music") : qsTr("Find in Playlist")
         text: root.searching ? Library.searchQuery : Library.playlistFilterQuery
         onTextChanged: {
             if (root.searching) {
@@ -319,7 +319,7 @@ Item {
             StyledMenuItem {
                 visible: !Library.selectedPlaylist.isLocal
                 height: visible ? implicitHeight : 0
-                text: qsTr("Open in Spotify")
+                text: qsTr("Open in YouTube Music")
                 symbol: "open_in_new"
                 onTriggered: App.openUrl(root.playlistLink)
             }

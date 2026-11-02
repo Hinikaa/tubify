@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
-import Swiftify
+import Tubify
 
 // the immersive player's left side (FullscreenNowPlaying): the cover with its
 // glow, inside the ring visualizer when that is on, then the song, the seek

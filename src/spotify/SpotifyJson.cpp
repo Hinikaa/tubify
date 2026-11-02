@@ -110,7 +110,7 @@ Profile profile(const QJsonObject &user)
     const QString name = string(user, "display_name");
     return {
         string(user, "id"),
-        name.isEmpty() ? QStringLiteral("Spotify User") : name,
+        name.isEmpty() ? QStringLiteral("YouTube Music User") : name,
         preferredArtworkUrl(user.value(QStringLiteral("images")).toArray(), 192),
     };
 }
@@ -134,7 +134,7 @@ Playlist playlist(const QJsonObject &object)
     result.isCollaborative = object.value(QStringLiteral("collaborative")).toBool();
     result.uri = string(object, "uri");
     if (result.uri.isEmpty()) {
-        result.uri = QStringLiteral("spotify:playlist:") + result.id;
+        result.uri = QStringLiteral("ytm:playlist:") + result.id;
     }
     return result;
 }
@@ -180,7 +180,7 @@ std::optional<Song> track(const QJsonObject &object, const Album &fallbackAlbum)
     const QString linkedUri = string(object.value(QStringLiteral("linked_from")).toObject(), "uri");
     const QString uri = linkedUri.isEmpty() ? string(object, "uri") : linkedUri;
     if ((!type.isEmpty() && type != QLatin1StringView("track"))
-        || !uri.startsWith(QLatin1StringView("spotify:track:"))) {
+        || !uri.startsWith(QLatin1StringView("ytm:track:"))) {
         return std::nullopt;
     }
 
@@ -194,6 +194,9 @@ std::optional<Song> track(const QJsonObject &object, const Album &fallbackAlbum)
     song.artists = joinedNames(artistArray);
     song.albumName = resolvedAlbum.name;
     song.artworkUrl = preferredArtworkUrl(albumObject.value(QStringLiteral("images")).toArray(), 640);
+    if (song.artworkUrl.isEmpty()) {
+        song.artworkUrl = preferredArtworkUrl(object.value(QStringLiteral("images")).toArray(), 640);
+    }
     if (song.artworkUrl.isEmpty()) {
         song.artworkUrl = resolvedAlbum.artworkUrl;
     }

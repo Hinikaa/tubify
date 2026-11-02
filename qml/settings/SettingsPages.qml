@@ -1,5 +1,5 @@
 /*
- * Swiftify, a spotify player for desktop
+ * Tubify, a spotify player for desktop
  * Copyright (C) 2026  shred0s
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,9 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
-// the settings themselves (SwiftifySettingsView), one page per rail
+// the settings themselves (TubifySettingsView), one page per rail
 // destination: what the visualizers and the backdrop cost, the sleep fade and
 // audio quality, the folders of music of the person's own, how the app fits
 // the desktop, how much it moves and draws, the
@@ -277,8 +277,13 @@ Item {
                     checked: Settings.normalizeVolume
                     onToggledTo: (checked) => Settings.normalizeVolume = checked
                 }
+                ConfigSwitch {
+                    text: qsTr("Block ads")
+                    checked: Settings.adBlock
+                    onToggledTo: (checked) => Settings.adBlock = checked
+                }
                 NoteText {
-                    text: qsTr("both cache and quality apply the next time playback connects")
+                    text: qsTr("blocking ads hides sponsored shelves and ad placements in YouTube Music answers. songs are always fetched ad-free.")
                 }
             }
         }
@@ -514,7 +519,7 @@ Item {
                 }
                 NoteText {
                     text: App.windows
-                        ? qsTr("closing the window keeps Swiftify running in the tray. choose Quit Swiftify from the tray menu to exit.")
+                        ? qsTr("closing the window keeps Tubify running in the tray. choose Quit Tubify from the tray menu to exit.")
                         : qsTr("window buttons are for desktops that draw none of their own, Hyprland closes and moves windows itself")
                 }
             }
@@ -605,7 +610,7 @@ Item {
 
                         StyledText {
                             width: parent.width
-                            text: Library.profileName.length > 0 ? Library.profileName : "Spotify"
+                            text: Library.profileName.length > 0 ? Library.profileName : "YouTube Music"
                             elide: Text.ElideRight
                             font.pixelSize: Appearance.fontSize.larger
                             font.weight: Font.DemiBold
@@ -642,10 +647,10 @@ Item {
 
                 StyledDialog {
                     id: logOutDialog
-                    headline: qsTr("Log Out of Spotify?")
+                    headline: qsTr("Log Out of YouTube Music?")
                     symbol: "logout"
                     iconShape: "ghostish"
-                    body: qsTr("swiftify forgets your library and playback logins on this computer. you can connect again any time.")
+                    body: qsTr("Tubify forgets your YouTube Music login on this computer. You can sign in again any time.")
 
                     buttons: [
                         TextButton {
@@ -668,7 +673,7 @@ Item {
             }
 
             ContentSection {
-                title: qsTr("Playback")
+                title: qsTr("YouTube Music")
                 symbol: "play_circle"
 
                 StatusRow {
@@ -684,14 +689,14 @@ Item {
 
                     TextButton {
                         variant: TextButton.Tonal
-                        symbol: "play_circle"
-                        text: Session.connected ? qsTr("Reconnect Playback") : qsTr("Connect Playback")
+                        symbol: "login"
+                        text: Session.connected ? qsTr("Reconnect") : qsTr("Sign In")
                         enabled: !Session.loginInProgress
                         onClicked: Session.beginPlaybackLogin()
                     }
                 }
                 NoteText {
-                    text: qsTr("playing music needs a Spotify Premium login of its own, separate from the librarys")
+                    text: qsTr("one YouTube Music sign-in plays music and loads your playlists, liked songs and search.")
                 }
             }
 
@@ -701,15 +706,8 @@ Item {
 
                 StatusRow {
                     label: qsTr("Status")
-                    value: qsTranslate("SpotifySession", Session.libraryStatus)
-                    good: Session.libraryConnected && !Session.libraryNeedsAuthorizationUpgrade
-                }
-                OutlinedTextField {
-                    x: 8
-                    width: Math.min(460, parent.width - 16)
-                    placeholder: qsTr("Spotify Client ID")
-                    text: Session.libraryClientId
-                    onTextEdited: Session.libraryClientId = text
+                    value: Session.libraryStatus
+                    good: Session.libraryConnected
                 }
                 Flow {
                     x: 8
@@ -721,14 +719,12 @@ Item {
                         variant: TextButton.Tonal
                         symbol: "library_music"
                         text: Session.libraryConnected ? qsTr("Reconnect Library") : qsTr("Connect Library")
-                        enabled: Session.libraryClientId.trim().length > 0 && !Session.loginInProgress
+                        enabled: !Session.loginInProgress
                         onClicked: Session.beginLibraryLogin()
                     }
                 }
                 NoteText {
-                    text: Session.libraryNeedsAuthorizationUpgrade
-                          ? qsTr("reconnect once to let Swiftify edit playlists and save songs")
-                          : qsTr("your playlists, saved songs and search come through the Spotify app whose Client ID is above.")
+                    text: qsTr("your playlists, liked songs and search come from your YouTube Music account.")
                 }
             }
 
@@ -906,7 +902,7 @@ Item {
                             anchors.centerIn: parent
                             width: 46
                             height: 46
-                            source: "qrc:/qt/qml/Swiftify/resources/swiftify-icon.png"
+                            source: "qrc:/qt/qml/Tubify/resources/tubify-icon.png"
                             sourceSize: Qt.size(96, 96)
                             smooth: true
                             mipmap: true
@@ -918,7 +914,7 @@ Item {
                         spacing: 2
 
                         StyledText {
-                            text: "Swiftify " + App.version
+                            text: "Tubify " + App.version
                             font.weight: Font.Medium
 
                             TapHandler {

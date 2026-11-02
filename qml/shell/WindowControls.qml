@@ -1,6 +1,6 @@
 /*
- * Swiftify, a spotify player for desktop
- * Copyright (C) 2026  shred0s
+ * Tubify, a YouTube Music player for desktop
+ * Copyright (C) 2026  Hinika
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,10 @@
 
 pragma ComponentBehavior: Bound
 import QtQuick
-import Swiftify
+import Tubify
 
-// minimise, maximise and close, for compositors that do not draw their own,
-// each on a shape of its own as the top bar's other buttons are
+// minimise, maximise and close, drawn as the three traffic lights macOS puts
+// in a window's corner: a red close, a yellow minimise, a green zoom.
 Row {
     id: root
 
@@ -30,39 +30,77 @@ Row {
     property MaterialScheme scheme: Appearance.colors
     layoutDirection: Settings.windowControlsOnRight ? Qt.RightToLeft : Qt.LeftToRight
 
-    spacing: 4
+    spacing: root.compact ? 6 : 8
 
-    ToolbarButton {
+    component TrafficLight: Item {
+        id: light
+
+        required property color baseColor
+        required property color hoverColor
+        required property color glyphColor
+        required property string glyph
+        required property string tooltip
+        signal clicked()
+
+        width: root.compact ? 16 : 18
+        height: width
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: root.compact ? 11 : 12
+            height: width
+            radius: width / 2
+            color: pointer.containsMouse ? light.hoverColor : light.baseColor
+            border.width: pointer.containsMouse ? 0 : 1
+            border.color: Qt.rgba(0, 0, 0, 0.14)
+            Behavior on color { ColorAnimation { duration: 120 } }
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                width: parent.width
+                height: parent.height
+                text: light.glyph
+                iconSize: root.compact ? 7 : 8
+                color: light.glyphColor
+                opacity: pointer.containsMouse ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
+            }
+        }
+
+        MouseArea {
+            id: pointer
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: light.clicked()
+        }
+    }
+
+    TrafficLight {
         objectName: "closeWindowButton"
-        scheme: root.scheme
-        size: root.compact ? 28 : 36
-        iconSize: root.compact ? 15 : 18
-        shape: "cookie9"
-        shapeHoverColor: root.scheme.errorContainer
-        shapePressedColor: root.scheme.errorContainerActive
-        symbol: "close"
+        baseColor: "#ff5f57"
+        hoverColor: "#ff3b30"
+        glyphColor: "#7a0000"
+        glyph: "close"
         tooltip: qsTr("Close window")
         onClicked: root.window.close()
     }
-    ToolbarButton {
-        objectName: "maximizeWindowButton"
-        scheme: root.scheme
-        size: root.compact ? 28 : 36
-        iconSize: root.compact ? 14 : 16
-        shape: "cookie6"
-        symbol: root.window.visibility === Window.Maximized ? "close_fullscreen" : "open_in_full"
-        tooltip: root.window.visibility === Window.Maximized ? qsTr("Restore") : qsTr("Maximize")
-        onClicked: root.window.visibility === Window.Maximized ? root.window.showNormal() : root.window.showMaximized()
-    }
-    ToolbarButton {
+    TrafficLight {
         objectName: "minimizeWindowButton"
-        scheme: root.scheme
-        size: root.compact ? 28 : 36
-        iconSize: root.compact ? 15 : 18
-        shape: "pill"
-        turnsOnHover: false
-        symbol: "remove"
+        baseColor: "#febc2e"
+        hoverColor: "#ffb01f"
+        glyphColor: "#8a5a00"
+        glyph: "remove"
         tooltip: qsTr("Minimize")
         onClicked: root.window.showMinimized()
+    }
+    TrafficLight {
+        objectName: "maximizeWindowButton"
+        baseColor: "#28c840"
+        hoverColor: "#1fbf34"
+        glyphColor: "#006400"
+        glyph: root.window.visibility === Window.Maximized ? "close_fullscreen" : "open_in_full"
+        tooltip: root.window.visibility === Window.Maximized ? qsTr("Restore") : qsTr("Maximize")
+        onClicked: root.window.visibility === Window.Maximized ? root.window.showNormal() : root.window.showMaximized()
     }
 }

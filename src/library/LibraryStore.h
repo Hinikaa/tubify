@@ -131,6 +131,7 @@ class LibraryStore : public QObject {
     Q_PROPERTY(swiftify::AlbumListModel *recommendedAlbums READ recommendedAlbums CONSTANT FINAL)
     Q_PROPERTY(swiftify::SongListModel *albumSongs READ albumSongs CONSTANT FINAL)
     Q_PROPERTY(swiftify::SongListModel *artistTopSongs READ artistTopSongs CONSTANT FINAL)
+    Q_PROPERTY(swiftify::SongListModel *artistTopSongsPreview READ artistTopSongsPreview CONSTANT FINAL)
     Q_PROPERTY(swiftify::AlbumListModel *artistAlbums READ artistAlbums CONSTANT FINAL)
     Q_PROPERTY(bool showAllArtistSongs READ showAllArtistSongs NOTIFY showAllArtistSongsChanged FINAL)
 
@@ -212,6 +213,7 @@ public:
     AlbumListModel *recommendedAlbums() const { return m_recommendedAlbums; }
     SongListModel *albumSongs() const { return m_albumSongs; }
     SongListModel *artistTopSongs() const { return m_artistTopSongs; }
+    SongListModel *artistTopSongsPreview() const { return m_artistTopSongsPreview; }
     bool showAllArtistSongs() const { return m_showAllArtistSongs; }
     AlbumListModel *artistAlbums() const { return m_artistAlbums; }
 
@@ -395,6 +397,7 @@ private:
     AlbumListModel *m_recommendedAlbums;
     SongListModel *m_albumSongs;
     SongListModel *m_artistTopSongs;
+    SongListModel *m_artistTopSongsPreview;
     bool m_showAllArtistSongs = false;
     AlbumListModel *m_artistAlbums;
 

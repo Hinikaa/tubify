@@ -121,15 +121,12 @@ Flickable {
         }
 
         Repeater {
-            model: Library.artistTopSongs
+            model: Library.showAllArtistSongs ? Library.artistTopSongs : Library.artistTopSongsPreview
 
             SongRow {
-                required property int index
                 x: root.margin
                 width: root.width - 2 * root.margin
                 songs: Library.artistTopSongs
-                visible: Library.showAllArtistSongs || index < 5
-                height: visible ? implicitHeight : 0
             }
         }
 

@@ -140,6 +140,7 @@ LibraryStore::LibraryStore(SpotifySession *session, Settings *settings, ErrorCen
     , m_recommendedAlbums(new AlbumListModel(this))
     , m_albumSongs(new SongListModel(this))
     , m_artistTopSongs(new SongListModel(this))
+    , m_artistTopSongsPreview(new SongListModel(this))
     , m_artistAlbums(new AlbumListModel(this))
     , m_searchSongs(new SongListModel(this))
     , m_searchAlbums(new AlbumListModel(this))
@@ -758,7 +759,9 @@ void LibraryStore::selectArtist(const Artist &artist)
     const ArtistDetail *opened = m_openedArtists.find(artist.id);
     navigate({Page::Artist, {}, {}, artist});
     m_artistAlbums->setItems(opened ? opened->albums : QList<Album> {});
-    m_artistTopSongs->setSongs(opened ? opened->topSongs : QList<Song> {});
+    const QList<Song> topSongs = opened ? opened->topSongs : QList<Song> {};
+    m_artistTopSongs->setSongs(topSongs);
+    m_artistTopSongsPreview->setSongs(topSongs.mid(0, 5));
     m_errors->clear();
     if (!m_session->hasLibraryToken()) {
         return;
@@ -790,6 +793,7 @@ QCoro::Task<> LibraryStore::runArtistLoad(Artist artist, CancelToken token)
         }
         if (topSongsLoaded) {
             m_artistTopSongs->setSongs(topSongs);
+            m_artistTopSongsPreview->setSongs(topSongs.mid(0, 5));
             m_openedArtists.insert(artist.id, {topSongs, m_artistAlbums->items()});
             co_await loadSavedStatuses(topSongs);
             throwIfCancelled(token);

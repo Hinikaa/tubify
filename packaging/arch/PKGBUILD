@@ -1,0 +1,27 @@
+# Builds the checkout this file sits in: run `makepkg -si` from this folder.
+pkgname=swiftify
+pkgver=0.1.1
+pkgrel=1
+pkgdesc='A Spotify player for Wayland, in Material 3 after end4'
+arch=('x86_64' 'aarch64')
+license=('GPL-3.0-or-later')
+depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'qt6-websockets' 'qtkeychain-qt6' 'qcoro' 'libpulse'
+         'alsa-lib' 'openssl' 'hicolor-icon-theme')
+makedepends=('cmake' 'ninja' 'rust' 'qt6-shadertools' 'git')
+optdepends=('xdg-desktop-portal: the native file picker for cover photos'
+            'ttf-material-symbols-variable-git: the icon font, if not bundled at build time')
+options=('!lto')
+
+_root="$startdir/../.."
+
+build() {
+    cmake -S "$_root" -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTING=OFF
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}

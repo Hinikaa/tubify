@@ -1,0 +1,29 @@
+.DS_Store
+
+# builds: any build folder, the release build copied to the desktop
+# (tools/install-desktop.sh) and the release build with the tests that
+# bench_frames runs in (docs/perf.md)
+build/
+build-*/
+# prebuilt packages (tools/build-linux-tarball.sh, tools/build-macos-dmg.sh)
+dist/
+# makepkg outputs of PKGBUILD builds
+packaging/arch/pkg/*
+packaging/arch/swiftify-*.pkg.tar.*
+
+# the core's own cargo builds
+target/
+*.profraw
+
+# the swift glue the core's default (apple) feature writes beside it,
+# when an editor builds the core with it
+/Swiftify/
+
+# editors' and language servers' own settings
+.qmlls.ini
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

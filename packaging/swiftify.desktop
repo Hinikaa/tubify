@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=Swiftify
+GenericName=Music Player
+Comment=Play your Spotify library
+Exec=swiftify
+Icon=swiftify
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=spotify;music;player;lyrics;
+StartupWMClass=swiftify
+SingleMainWindow=true
+Actions=Immersive;PlayPause;
+
+[Desktop Action Immersive]
+Name=Open Immersive Player
+Exec=swiftify --immersive
+
+[Desktop Action PlayPause]
+Name=Play or Pause
+Exec=swiftify --play-pause

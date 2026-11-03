@@ -318,6 +318,9 @@ bool RustCore::sessionIsValid() const { return tubify_core_session_is_valid(m_co
 bool RustCore::audioOutputStalled() const { return tubify_core_audio_output_stalled(m_core); }
 quint32 RustCore::playbackPositionMs() const { return tubify_core_playback_position_ms(m_core); }
 quint32 RustCore::playbackDurationMs() const { return tubify_core_playback_duration_ms(m_core); }
+quint32 RustCore::playbackSampleRate() const { return tubify_core_playback_sample_rate(m_core); }
+quint32 RustCore::playbackBitrateKbps() const { return tubify_core_playback_bitrate_kbps(m_core); }
+quint32 RustCore::playbackBitDepth() const { return tubify_core_playback_bit_depth(m_core); }
 bool RustCore::takeEndOfTrack() { return tubify_core_take_end_of_track(m_core); }
 
 bool RustCore::playLiveBuffer(TubifyLiveBuffer *buffer)

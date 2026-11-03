@@ -77,6 +77,9 @@ public:
     quint32 playbackPositionMs() const override;
     quint32 playbackDurationMs() const override;
     bool takeEndOfTrack() override;
+    quint32 playbackSampleRate() const override;
+    quint32 playbackBitrateKbps() const override;
+    quint32 playbackBitDepth() const override;
 
     bool playLiveBuffer(TubifyLiveBuffer *buffer) override;
     void stopLiveBuffer() override;

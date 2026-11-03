@@ -102,6 +102,11 @@ public:
     virtual quint32 playbackPositionMs() const = 0;
     virtual quint32 playbackDurationMs() const = 0;
     virtual bool takeEndOfTrack() = 0;
+    /// of the playing file; 0 when unknown
+    virtual quint32 playbackSampleRate() const { return 0; }
+    virtual quint32 playbackBitrateKbps() const { return 0; }
+    /// bits per sample of a lossless file; 0 for lossy ones
+    virtual quint32 playbackBitDepth() const { return 0; }
 
     /// plays what is pushed into `buffer` through the equalizer and the
     /// analyser, in place of whatever played; one already playing carries on.

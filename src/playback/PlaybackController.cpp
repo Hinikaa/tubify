@@ -1253,6 +1253,17 @@ void PlaybackController::syncPositionAndDuration()
         setLivePosition(position);
     }
     setDuration(duration);
+    const quint32 kbps = m_core->playbackBitrateKbps();
+    const quint32 rate = m_core->playbackSampleRate();
+    QStringList parts;
+    // a lossless file has a bit depth to show; a lossy one only a bitrate
+    if (const quint32 bits = m_core->playbackBitDepth(); bits > 0) parts << QStringLiteral("%1-bit").arg(bits);
+    else if (kbps > 0) parts << QStringLiteral("%1 kbps").arg(kbps);
+    if (rate > 0) parts << QStringLiteral("%1 kHz").arg(rate / 1000.0, 0, 'f', rate % 1000 ? 1 : 0);
+    if (const QString format = parts.join(QStringLiteral(" · ")); format != m_audioFormat) {
+        m_audioFormat = format;
+        emit audioFormatChanged();
+    }
     if (std::abs(qint64(position) - qint64(m_lastSyncedMediaPosition)) >= 1000) {
         m_lastSyncedMediaPosition = position;
         syncMediaSession();

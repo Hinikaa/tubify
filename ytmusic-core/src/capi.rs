@@ -672,6 +672,9 @@ query!(tubify_core_session_is_valid -> bool, false, |core| core.session_is_valid
 query!(tubify_core_audio_output_stalled -> bool, false, |core| core.audio_output_stalled());
 query!(tubify_core_playback_position_ms -> u32, 0, |core| core.playback_position_ms());
 query!(tubify_core_playback_duration_ms -> u32, 0, |core| core.playback_duration_ms());
+query!(tubify_core_playback_sample_rate -> u32, 0, |core| core.playback_format().0);
+query!(tubify_core_playback_bitrate_kbps -> u32, 0, |core| core.playback_format().1);
+query!(tubify_core_playback_bit_depth -> u32, 0, |core| core.playback_format().2);
 query!(tubify_core_take_end_of_track -> bool, false, |core| core.take_end_of_track());
 query!(tubify_core_volume -> f32, 0.75, |core| core.volume());
 query!(tubify_core_output_rate -> u32, 0, |core| core.output_rate());

@@ -295,6 +295,20 @@ pub fn read_tags(path: &Path, artwork_dir: Option<&Path>) -> Result<LocalTags, S
 }
 
 /// how long the file at `path` runs, for a decoder that cannot say
+/// bits per sample of the file's audio: only lossless and PCM files say (flac,
+/// wav, alac, aiff). 0 for lossy ones and anything unreadable.
+pub fn bit_depth(path: &Path) -> u32 {
+    let Ok(probed) = open(path) else { return 0 };
+    probed
+        .format
+        .default_track()
+        .and_then(|track| {
+            let params = &track.codec_params;
+            params.bits_per_sample.or(params.bits_per_coded_sample)
+        })
+        .unwrap_or(0)
+}
+
 pub fn measure_duration_ms(path: &Path) -> Option<u64> {
     let mut probed = open(path).ok()?;
     Some(duration_ms(probed.format.as_mut())).filter(|duration| *duration > 0)

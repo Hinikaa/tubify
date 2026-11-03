@@ -292,6 +292,15 @@ Item {
                     color: Qt.rgba(1, 1, 1, 0.4)
                     animateChange: !metadataFade.running
                 }
+
+                StyledText {
+                    width: parent.width
+                    visible: Player.audioFormat.length > 0
+                    text: Player.audioFormat
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: Appearance.fontSize.smallest
+                    color: Qt.rgba(1, 1, 1, 0.3)
+                }
             }
 
             Item {

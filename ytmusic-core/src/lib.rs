@@ -611,6 +611,8 @@ impl YtMusicCore {
         {
             let mut state = self.lock_state()?;
             state.local_playback = Some(file_playback::LocalPlayback {
+                bitrate_kbps: file_playback::average_kbps(&path, duration_ms),
+                bit_depth: local::bit_depth(&path),
                 path: path.clone(),
                 duration_ms,
                 pushed_frames,
@@ -685,6 +687,14 @@ impl YtMusicCore {
             .lock()
             .map(|timeline| timeline.duration_ms)
             .unwrap_or(0)
+    }
+
+    /// (sample rate in Hz, average bitrate in kbps, bit depth) of the playing file, zeros when none.
+    pub fn playback_format(&self) -> (u32, u32, u32) {
+        self.lock_state()
+            .ok()
+            .and_then(|state| state.local_playback.as_ref().map(|p| (p.sample_rate, p.bitrate_kbps, p.bit_depth)))
+            .unwrap_or((0, 0, 0))
     }
 
     pub fn take_end_of_track(&self) -> bool {
@@ -965,6 +975,8 @@ impl YtMusicCore {
 
         let mut state = self.lock_state()?;
         state.local_playback = Some(file_playback::LocalPlayback {
+            bitrate_kbps: playback.bitrate_kbps,
+            bit_depth: playback.bit_depth,
             path,
             duration_ms: duration,
             pushed_frames,

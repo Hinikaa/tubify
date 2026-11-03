@@ -56,10 +56,20 @@ pub(crate) struct LocalPlayback {
     pub(crate) channels: u32,
     /// sample rate of the decoded stream.
     pub(crate) sample_rate: u32,
+    /// the file's average bitrate in kbps (size over duration), 0 if unknown.
+    pub(crate) bitrate_kbps: u32,
+    /// bits per sample for lossless files, 0 for lossy ones.
+    pub(crate) bit_depth: u32,
     /// linear gain from the file's replaygain tags (1.0 when untagged).
     pub(crate) replay_gain: f32,
     /// signals an in-flight decode to stop (on a seek/track change).
     pub(crate) cancel: Arc<AtomicBool>,
+}
+
+/// average bitrate of `path` in kbps; 0 when the duration is unknown.
+pub(crate) fn average_kbps(path: &std::path::Path, duration_ms: u64) -> u32 {
+    let bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    (bytes * 8 / duration_ms.max(1)).min(u32::MAX as u64) as u32
 }
 
 impl LocalPlayback {
@@ -240,6 +250,8 @@ mod tests {
             base_position_ms: 30_000,
             channels: 2,
             sample_rate: 44_100,
+            bitrate_kbps: 0,
+            bit_depth: 0,
             replay_gain: 1.0,
             cancel: Arc::new(AtomicBool::new(false)),
         };

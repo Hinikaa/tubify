@@ -63,6 +63,8 @@ class PlaybackController : public QObject {
     Q_PROPERTY(int positionMs READ positionMs NOTIFY positionChanged FINAL)
     Q_PROPERTY(quint32 livePositionMs READ livePositionMs NOTIFY livePositionChanged FINAL)
     Q_PROPERTY(int durationMs READ durationMs NOTIFY durationChanged FINAL)
+    /// "16-bit · 44.1 kHz" (a lossy file shows "256 kbps" instead) of the playing file, empty until it is known
+    Q_PROPERTY(QString audioFormat READ audioFormat NOTIFY audioFormatChanged FINAL)
     Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY volumeChanged FINAL)
     Q_PROPERTY(bool shuffle READ isShuffleEnabled NOTIFY shuffleChanged FINAL)
     Q_PROPERTY(RepeatMode repeatMode READ repeatMode NOTIFY repeatModeChanged FINAL)
@@ -117,6 +119,7 @@ public:
     /// where playback really is, polled four times a second
     quint32 livePositionMs() const { return m_livePositionMs; }
     int durationMs() const { return int(m_durationMs); }
+    QString audioFormat() const { return m_audioFormat; }
     double volume() const { return m_volume; }
     bool isShuffleEnabled() const { return m_shuffle; }
     RepeatMode repeatMode() const { return m_repeatMode; }
@@ -215,6 +218,7 @@ signals:
     void positionChanged();
     void livePositionChanged();
     void durationChanged();
+    void audioFormatChanged();
     void volumeChanged();
     void shuffleChanged();
     void repeatModeChanged();
@@ -314,6 +318,7 @@ private:
     quint32 m_livePositionMs = 0;
     quint32 m_publishedPositionMs = 0;
     quint32 m_durationMs = 0;
+    QString m_audioFormat;
     quint32 m_lastSyncedMediaPosition = std::numeric_limits<quint32>::max();
     quint64 m_crossfadeSerial = 0;
     bool m_crossfadeStarted = false;

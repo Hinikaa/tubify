@@ -82,7 +82,7 @@ QUrl imageUrl(const QJsonArray &images)
             const QJsonObject image = value.toObject();
             if (image.value(QStringLiteral("size")).toString() == size) {
                 const QString url = image.value(QStringLiteral("#text")).toString();
-                if (!url.isEmpty()) {
+                if (!url.isEmpty() && !url.contains("2a96cbd8b46e442fc41c2b86b821562f")) {
                     return QUrl(url);
                 }
             }
@@ -90,7 +90,7 @@ QUrl imageUrl(const QJsonArray &images)
     }
     for (const QJsonValue &value : images) {
         const QString url = value.toObject().value(QStringLiteral("#text")).toString();
-        if (!url.isEmpty()) {
+        if (!url.isEmpty() && !url.contains("2a96cbd8b46e442fc41c2b86b821562f")) {
             return QUrl(url);
         }
     }

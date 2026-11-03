@@ -560,24 +560,26 @@ QCoro::Task<QUrl> StatsStore::deezerArtwork(QString query, int kind)
 
 QCoro::Task<> StatsStore::fillLastFmArtwork()
 {
-    int budget = 30;
+    int budget = 10;
     for (StatEntry &entry : m_snapshot.topTracks) {
         if (budget-- <= 0) break;
-        if (!entry.artworkUrl.isValid()) {
+        if (!entry.artworkUrl.isValid() || entry.artworkUrl.toString().contains("2a96cbd8b46e442fc41c2b86b821562f")) {
             entry.artworkUrl = co_await deezerArtwork(entry.song.artists + u' ' + entry.name, 0);
             entry.song.artworkUrl = entry.artworkUrl;
         }
     }
+    budget = 10;
     for (StatEntry &entry : m_snapshot.topArtists) {
         if (budget-- <= 0) break;
-        if (!entry.artworkUrl.isValid()) {
+        if (!entry.artworkUrl.isValid() || entry.artworkUrl.toString().contains("2a96cbd8b46e442fc41c2b86b821562f")) {
             entry.artworkUrl = co_await deezerArtwork(entry.name, 1);
             entry.artist.artworkUrl = entry.artworkUrl;
         }
     }
+    budget = 10;
     for (StatEntry &entry : m_snapshot.topAlbums) {
         if (budget-- <= 0) break;
-        if (!entry.artworkUrl.isValid()) {
+        if (!entry.artworkUrl.isValid() || entry.artworkUrl.toString().contains("2a96cbd8b46e442fc41c2b86b821562f")) {
             entry.artworkUrl = co_await deezerArtwork(entry.subtitle + u' ' + entry.name, 2);
             entry.album.artworkUrl = entry.artworkUrl;
         }

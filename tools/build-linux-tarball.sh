@@ -52,14 +52,14 @@ fail() { echo "error, $1" >&2; exit 1; }
 [[ -n "$QT" ]] || fail "pass --qt with the path of a qt 6.10 or newer gcc_64 kit"
 QT="$(cd "$QT" && pwd)"
 [[ -x "$QT/bin/qmake" ]] || fail "no qmake in $QT/bin, pass the gcc_64 folder of the kit"
-for tool in cmake ninja git curl cargo; do
+for tool in cmake ninja git curl cargo zip dpkg-deb; do
     command -v "$tool" >/dev/null || fail "$tool is missing"
 done
 
 SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
+VERSION="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
 [[ -n "$VERSION" ]] || fail "could not read the version from CMakeLists.txt"
-NAME="swiftify-$VERSION-linux-x86_64"
+NAME="tubify-$VERSION-linux-x86_64"
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 WORK="$SOURCE/build-linux-tarball"
@@ -69,7 +69,7 @@ mkdir -p "$WORK/sources" "$WORK/tools"
 
 echo "qt $QT"
 echo "version $VERSION"
-echo "output $OUT/$NAME.tar.gz"
+echo "output $OUT/$NAME.tar.gz, $OUT/$NAME.zip, $OUT/tubify_${VERSION}_amd64.deb"
 
 # pinned, and checked against these hashes before they run
 LINUXDEPLOY_URL="https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage"
@@ -169,6 +169,7 @@ done
 
 rm -rf "${WORK:?}/${NAME:?}"
 cp -a "$APPDIR/usr" "$WORK/$NAME"
+ln -sf swiftify "$WORK/$NAME/bin/tubify"
 
 # everything in it has to find its libraries in the tarball or the system,
 # with none of the build's own paths
@@ -181,4 +182,24 @@ while IFS= read -r -d '' file; do
 done < <(find "$WORK/$NAME" -type f \( -path '*/bin/*' -o -name '*.so*' \) -print0)
 [[ -z "$missing" ]] || fail "libraries missing from the tarball"$'\n'"$missing"
 tar -C "$WORK" -czf "$OUT/$NAME.tar.gz" "$NAME"
-echo "built $OUT/$NAME.tar.gz"
+(cd "$WORK" && zip -qr "$OUT/$NAME.zip" "$NAME")
+echo "built $OUT/$NAME.tar.gz and $OUT/$NAME.zip"
+DEBROOT="$WORK/deb"
+rm -rf "$DEBROOT"
+mkdir -p "$DEBROOT/opt/tubify" "$DEBROOT/usr/bin" "$DEBROOT/usr/share/applications" "$DEBROOT/DEBIAN"
+cp -a "$WORK/$NAME/." "$DEBROOT/opt/tubify/"
+ln -s /opt/tubify/bin/tubify "$DEBROOT/usr/bin/tubify"
+install -Dm644 "$SOURCE/packaging/tubify.desktop" "$DEBROOT/usr/share/applications/tubify.desktop"
+for size in 32 48 64 128 256 512; do install -Dm644 "$SOURCE/packaging/icons/tubify-$size.png" "$DEBROOT/usr/share/icons/hicolor/${size}x${size}/apps/tubify.png"; done
+cat > "$DEBROOT/DEBIAN/control" <<EOF
+Package: tubify
+Version: $VERSION
+Section: sound
+Priority: optional
+Architecture: amd64
+Maintainer: Hinikaa <hinikaa@users.noreply.github.com>
+Depends: libc6, libstdc++6, libasound2, libpulse0, libsecret-1-0, libglib2.0-0, libdbus-1-3, libsystemd0, libxkbcommon0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libxcb1, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xinerama0, libxcb-xkb1, libxcb-xinput0, libfontconfig1, libfreetype6, libgl1, libegl1
+Description: Tubify, a native YouTube Music desktop client
+EOF
+dpkg-deb --build --root-owner-group "$DEBROOT" "$OUT/tubify_${VERSION}_amd64.deb"
+echo "built $OUT/tubify_${VERSION}_amd64.deb"

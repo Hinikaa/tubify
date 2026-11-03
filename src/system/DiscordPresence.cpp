@@ -155,7 +155,7 @@ DiscordPresence::DiscordPresence(PlaybackController *player, Settings *settings,
     connect(&m_inactivity, &QTimer::timeout, this, &DiscordPresence::onInactivityTimeout);
     connect(&m_socket, &QLocalSocket::connected, this, [this] {
         send(0, QJsonDocument(QJsonObject {{QStringLiteral("v"), 1},
-            {QStringLiteral("client_id"), m_settings->discordApplicationId()}}).toJson(QJsonDocument::Compact));
+            {QStringLiteral("client_id"), applicationId()}}).toJson(QJsonDocument::Compact));
     });
     connect(&m_socket, &QLocalSocket::readyRead, this, &DiscordPresence::readFrames);
     connect(&m_socket, &QLocalSocket::disconnected, this, &DiscordPresence::disconnected);
@@ -207,10 +207,17 @@ void DiscordPresence::setInactivityTimeout(int ms)
     if (active) m_inactivity.start();
 }
 
+QString DiscordPresence::applicationId() const
+{
+    const QString id = m_settings->discordApplicationId().trimmed();
+    // Vencord's public rich-presence app, GPL-3.0: a shared default so the
+    // activity works without the person creating a Discord application.
+    return id.isEmpty() ? QStringLiteral("1108588077900898414") : id;
+}
+
 QString DiscordPresence::status() const
 {
     if (!m_settings->discordEnabled()) return tr("Listening activity is private. Enable to share track, artist and progress with Discord.");
-    if (m_settings->discordApplicationId().isEmpty()) return tr("Enter your Discord Application ID to connect.");
     if (m_ready) return tr("Connected to Discord");
     switch (m_failure) {
     case Failure::Unavailable: return tr("No reachable Discord IPC socket. Start Discord and enable its RPC integration.");
@@ -257,7 +264,7 @@ void DiscordPresence::configure()
     m_failure = Failure::None;
     m_failureCode = -1;
     emit statusChanged();
-    if (!m_settings->discordEnabled() || m_settings->discordApplicationId().isEmpty()) return;
+    if (!m_settings->discordEnabled() || applicationId().isEmpty()) return;
     m_endpoints = m_socketLocator();
     m_endpoint = 0;
     m_retry.start();
@@ -271,11 +278,11 @@ void DiscordPresence::configure()
 
 void DiscordPresence::connectNext()
 {
-    if (m_endpoints.isEmpty() && m_settings->discordEnabled() && !m_settings->discordApplicationId().isEmpty()) {
+    if (m_endpoints.isEmpty() && m_settings->discordEnabled() && !applicationId().isEmpty()) {
         m_failure = Failure::Unavailable;
         emit statusChanged();
     }
-    if (!m_settings->discordEnabled() || m_settings->discordApplicationId().isEmpty()
+    if (!m_settings->discordEnabled() || applicationId().isEmpty()
         || m_socket.state() != QLocalSocket::UnconnectedState || m_endpoint >= m_endpoints.size()) return;
     m_buffer.clear();
     m_deadline.start();
@@ -288,7 +295,7 @@ void DiscordPresence::disconnected()
     setReady(false);
     m_published = false;
     m_buffer.clear();
-    if (!m_idleTerminated && m_settings->discordEnabled() && !m_settings->discordApplicationId().isEmpty() && !m_retry.isActive()) m_retry.start();
+    if (!m_idleTerminated && m_settings->discordEnabled() && !applicationId().isEmpty() && !m_retry.isActive()) m_retry.start();
     if (!m_idleTerminated) QTimer::singleShot(0, this, &DiscordPresence::connectNext);
 }
 
@@ -300,7 +307,7 @@ void DiscordPresence::handlePlaybackStateChanged()
         m_inactivity.stop();
         if (m_idleTerminated) {
             m_idleTerminated = false;
-            if (m_settings->discordEnabled() && !m_settings->discordApplicationId().isEmpty()) {
+            if (m_settings->discordEnabled() && !applicationId().isEmpty()) {
                 m_endpoints = m_socketLocator();
                 m_endpoint = 0;
                 if (m_endpoints.isEmpty()) {
@@ -312,7 +319,7 @@ void DiscordPresence::handlePlaybackStateChanged()
             }
         }
     } else {
-        if (m_settings->discordEnabled() && !m_settings->discordApplicationId().isEmpty()) {
+        if (m_settings->discordEnabled() && !applicationId().isEmpty()) {
             if (!m_idleTerminated && !m_inactivity.isActive()) {
                 m_inactivity.start();
             }

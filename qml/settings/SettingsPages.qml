@@ -755,8 +755,7 @@ Item {
                     text: discordId.text.length > 0 && !/^[0-9]{17,20}$/.test(discordId.text.trim())
                         ? qsTr("Enter a valid numeric Application ID (17–20 digits).")
                         : !Settings.discordEnabled ? qsTr("Listening activity is private. Enable to share track, artist and progress with Discord.")
-                            : Settings.discordApplicationId.length === 0 ? qsTr("Create an application in the Discord Developer Portal and paste its Application ID above. No token or secret is needed.")
-                                : Discord.status
+                            : qsTr("The field is optional. A shared app is used by default, so it works without setup.") + " " + Discord.status
                 }
                 TextButton {
                     x: 8
@@ -961,7 +960,7 @@ Item {
                             }
                         }
                         StyledText {
-                            text: qsTr("a fork of Swiftify by shred0s, maintained by Hinika")
+                            text: qsTr("a fork of Swiftify by shred0s, maintained by Hinikaa")
                             font.pixelSize: Appearance.fontSize.smaller
                             color: Appearance.colors.onSurfaceVariant
                         }

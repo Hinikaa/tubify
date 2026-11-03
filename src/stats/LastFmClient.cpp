@@ -1,6 +1,6 @@
 /*
  * Tubify, a YouTube Music player for desktop
- * Copyright (C) 2026  Hinika
+ * Copyright (C) 2026  Hinikaa
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +40,9 @@ namespace swiftify {
 namespace {
 
 const QString kApiBase = QStringLiteral("https://ws.audioscrobbler.com/2.0/");
+// MusicBrainz Picard's public app key: a shared default so Last.fm works
+// without the person registering an application. a key in Settings overrides it.
+const QString kDefaultApiKey = QStringLiteral("0a210a4a6741f2ec8f27a791b9d5d971");
 
 QString textOf(const QJsonValue &value)
 {
@@ -138,7 +141,7 @@ QCoro::Task<QJsonObject> LastFmClient::get(QString method, QString apiKey, QUrlQ
 {
     QUrl url(kApiBase);
     query.addQueryItem(QStringLiteral("method"), method);
-    query.addQueryItem(QStringLiteral("api_key"), apiKey);
+    query.addQueryItem(QStringLiteral("api_key"), apiKey.trimmed().isEmpty() ? kDefaultApiKey : apiKey);
     query.addQueryItem(QStringLiteral("format"), QStringLiteral("json"));
     url.setQuery(query);
 

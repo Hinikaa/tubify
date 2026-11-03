@@ -36,7 +36,7 @@ Flickable {
     readonly property bool usesLastFm: Stats.source === "lastfm"
     readonly property bool usesRemote: usesStatsFm || usesLastFm
     readonly property bool needsUsername: usesStatsFm && Stats.username.length === 0
-    readonly property bool needsLastFm: usesLastFm && (Stats.lastFmUsername.length === 0 || Stats.lastFmApiKey.length === 0)
+    readonly property bool needsLastFm: usesLastFm && Stats.lastFmUsername.length === 0
     readonly property bool wide: innerWidth >= 860
     property bool allTracks: false
     readonly property list<string> periodNames: [qsTr("today"), qsTr("the last 4 weeks"), qsTr("the last 6 months"), qsTr("all time")]
@@ -337,7 +337,7 @@ Flickable {
             }
             StyledText {
                 width: parent.width
-                text: qsTr("Type your Last.fm username and paste your own API key. Create one for free at last.fm/api/account/create.")
+                text: qsTr("Type your Last.fm username. A shared API key is used automatically; you can override it in Settings.")
                 wrapMode: Text.Wrap
                 color: Appearance.colors.onSurfaceVariant
             }
@@ -348,21 +348,13 @@ Flickable {
                 text: Stats.lastFmUsername
                 onAccepted: Stats.lastFmUsername = text
             }
-            OutlinedTextField {
-                id: lastFmKey
-                width: parent.width
-                placeholder: qsTr("Last.fm API key")
-                text: Stats.lastFmApiKey
-                onAccepted: Stats.lastFmApiKey = text
-            }
             TextButton {
                 variant: TextButton.Tonal
                 symbol: "query_stats"
                 text: qsTr("Show Stats")
-                enabled: lastFmUser.text.trim().length > 0 && lastFmKey.text.trim().length > 0
+                enabled: lastFmUser.text.trim().length > 0
                 onClicked: {
                     Stats.lastFmUsername = lastFmUser.text
-                    Stats.lastFmApiKey = lastFmKey.text
                     Stats.refresh()
                 }
             }

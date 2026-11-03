@@ -305,7 +305,7 @@ void StatsStore::refresh()
         }
         detach(loadStatsFm(m_load.renew()));
     } else if (usesLastFm()) {
-        if (lastFmUsername().isEmpty() || lastFmApiKey().isEmpty()) {
+        if (lastFmUsername().isEmpty()) {
             setError({});
             setLoading(false);
             apply({});

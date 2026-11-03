@@ -1,6 +1,6 @@
 /*
  * Tubify, a YouTube Music player for desktop
- * Copyright (C) 2026  Hinika
+ * Copyright (C) 2026  Hinikaa
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ std::optional<StoredCredentials> StoredCredentials::fromJson(const QByteArray &j
 
 QString CredentialStore::service()
 {
-    return QStringLiteral("dev.hinika.Tubify.youtube-music");
+    return QStringLiteral("dev.hinikaa.Tubify.youtube-music");
 }
 
 QString CredentialStore::accountName(Account account)

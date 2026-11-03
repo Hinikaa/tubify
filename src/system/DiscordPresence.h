@@ -62,6 +62,8 @@ public:
     static DiscordPresence *create(QQmlEngine *, QJSEngine *);
     bool connected() const { return m_ready; }
     QString status() const;
+    /// the app id to connect with: the one in settings, or the shared default
+    QString applicationId() const;
     int inactivityTimeout() const { return m_inactivity.interval(); }
     void setInactivityTimeout(int ms);
     bool inactivityTimerActive() const { return m_inactivity.isActive(); }

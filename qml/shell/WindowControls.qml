@@ -1,6 +1,6 @@
 /*
  * Tubify, a YouTube Music player for desktop
- * Copyright (C) 2026  Hinika
+ * Copyright (C) 2026  Hinikaa
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ Row {
     property MaterialScheme scheme: Appearance.colors
     layoutDirection: Settings.windowControlsOnRight ? Qt.RightToLeft : Qt.LeftToRight
 
-    spacing: root.compact ? 6 : 8
+    spacing: root.compact ? 8 : 10
 
     component TrafficLight: Item {
         id: light
@@ -42,12 +42,12 @@ Row {
         required property string tooltip
         signal clicked()
 
-        width: root.compact ? 16 : 18
+        width: root.compact ? 18 : 20
         height: width
 
         Rectangle {
             anchors.centerIn: parent
-            width: root.compact ? 11 : 12
+            width: root.compact ? 13 : 14
             height: width
             radius: width / 2
             color: pointer.containsMouse ? light.hoverColor : light.baseColor
@@ -60,7 +60,7 @@ Row {
                 width: parent.width
                 height: parent.height
                 text: light.glyph
-                iconSize: root.compact ? 7 : 8
+                iconSize: root.compact ? 8 : 9
                 color: light.glyphColor
                 opacity: pointer.containsMouse ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 100 } }

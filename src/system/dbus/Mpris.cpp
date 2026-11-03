@@ -41,7 +41,7 @@ QDBusObjectPath trackPath(const Song &song)
     // person's own goes by a hash of where it is
     const QString id = song.isLocalFile() ? QStringLiteral("local_") + QString::number(qHash(song.uri), 16)
                                           : song.spotifyId();
-    return QDBusObjectPath(QStringLiteral("/dev/hinika/tubify/track/") + id);
+    return QDBusObjectPath(QStringLiteral("/dev/hinikaa/tubify/track/") + id);
 }
 
 } // namespace

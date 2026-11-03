@@ -11,6 +11,7 @@ A native desktop client built with Qt Quick and a Rust core.
 [![qt](https://img.shields.io/badge/Qt_Quick-6.10-41cd52?style=for-the-badge&logo=qt&logoColor=white&labelColor=1d1b20)](https://www.qt.io)
 [![rust](https://img.shields.io/badge/core-rust-dea584?style=for-the-badge&logo=rust&logoColor=white&labelColor=1d1b20)](ytmusic-core)
 [![license](https://img.shields.io/badge/license-GPL--3.0-8f6cff?style=for-the-badge&labelColor=1d1b20)](LICENSE)
+[![release](https://img.shields.io/github/v/release/Hinikaa/tubify?style=for-the-badge&color=6750a4&labelColor=1d1b20)](https://github.com/Hinikaa/tubify/releases/latest)
 
 **[install](#install) · [build](#build) · [first run](#first-run) · [last.fm](#lastfm) · [discord](#discord) · [limits](#notes-and-limits)**
 
@@ -69,45 +70,17 @@ Tubify is unofficial and is not affiliated with YouTube or Google.
 
 ## install
 
-There are no public packages yet. Build it from source for now.
+Grab the latest build from the [releases page](https://github.com/Hinikaa/tubify/releases/latest).
 
-<details>
-<summary><b>Linux</b></summary>
-<br>
+| platform | file | how to run |
+|---|---|---|
+| Linux portable | `tubify-0.1.0-linux-x86_64.zip` | unzip anywhere, run `bin/tubify`. No install step. |
+| Linux portable | `tubify-0.1.0-linux-x86_64.tar.gz` | extract anywhere, run `bin/tubify`. |
+| Debian / Ubuntu | `tubify_0.1.0_amd64.deb` | `sudo apt install ./tubify_0.1.0_amd64.deb` |
+| macOS Apple Silicon | `tubify-0.1.0-macos-arm64.dmg` | drag to Applications. Ad-hoc signed: use Open Anyway, or `xattr -dr com.apple.quarantine /Applications/Tubify.app`. |
+| Windows x64 | `tubify-0.1.0-windows-x86_64.zip` | extract, run `bin\swiftify.exe`. SmartScreen: More info → Run anyway. |
 
-Build with the Linux commands below. The repo ships a `.desktop` file and
-icons in `packaging/`. Install the binary somewhere on your `PATH` and copy
-`packaging/tubify.desktop` to `~/.local/share/applications/`.
-
-The audio core uses ALSA, and the device monitor uses PulseAudio. Almost every
-desktop already has both.
-
-</details>
-
-<details>
-<summary><b>macOS</b></summary>
-<br>
-
-Build the `.app` with the macOS commands below. It is not notarized, so macOS
-will block the first launch. Open **System Settings → Privacy & Security** and
-choose **Open Anyway**, or run:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/Tubify.app
-```
-
-</details>
-
-<details>
-<summary><b>Windows</b></summary>
-<br>
-
-Build with MSVC and package with CPack. The exe is not signed, so SmartScreen
-may show “Windows protected your PC”. Choose **More info → Run anyway**.
-
-Keep `yt-dlp.exe` and `ffmpeg.exe` next to the executable or on `PATH`.
-
-</details>
+The Linux builds bundle Qt and most libraries. `yt-dlp` and `ffmpeg` are still needed for playback; put them on `PATH` or next to the executable. Build from source below if your distro is not covered.
 
 ## build
 

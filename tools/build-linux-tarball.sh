@@ -146,10 +146,10 @@ PATH="$WORK/tools:$PATH" "$WORK/tools/linuxdeploy-x86_64.AppImage" \
 [[ -f "$APPDIR/usr/bin/qt.conf" ]] || fail "linuxdeploy wrote no qt.conf"
 [[ -f "$APPDIR/usr/plugins/platforms/libqwayland.so" ]] || fail "the wayland platform plugin is missing"
 [[ -f "$APPDIR/usr/plugins/tls/libqopensslbackend.so" ]] || fail "the openssl tls plugin is missing"
-[[ -f "$APPDIR/usr/share/licenses/swiftify/LICENSE" ]] || fail "the license is missing"
+[[ -f "$APPDIR/usr/share/licenses/tubify/LICENSE" ]] || fail "the license is missing"
 for license in material-color-utilities.LICENSE rounded-polygon-qmljs.LICENSE material-symbols.LICENSE \
     rust-crates.LICENSE qt.LICENSE qt.NOTICE qtkeychain.LICENSE qcoro.LICENSE; do
-    [[ -f "$APPDIR/usr/share/licenses/swiftify/$license" ]] || fail "$license is missing"
+    [[ -f "$APPDIR/usr/share/licenses/tubify/$license" ]] || fail "$license is missing"
 done
 
 # what the desktop itself is built on comes from the machine, never the

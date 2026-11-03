@@ -60,6 +60,9 @@ T.AbstractButton {
             height: 54
             radius: 8
             source: root.song.artworkUrl
+            artist: root.song.artists
+            title: root.song.name
+            albumName: root.song.albumName
         }
 
         Column {

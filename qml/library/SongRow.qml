@@ -150,6 +150,9 @@ T.AbstractButton {
                 anchors.fill: parent
                 radius: 6
                 source: root.song.artworkUrl
+                artist: root.song.artists
+                title: root.song.name
+                albumName: root.song.albumName
             }
 
             // the playing row's meter, built for it alone, and kept as the

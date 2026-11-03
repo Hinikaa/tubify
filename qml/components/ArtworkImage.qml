@@ -29,6 +29,12 @@ Item {
     id: root
 
     property url source
+    property string artist
+    property string title
+    property string albumName
+    property int artworkKind: 0
+    property url deezerSource
+    property string deezerQuery
     property real radius: Appearance.sizes.artworkRadius
     property bool circular: false
     property real borderWidth: 0
@@ -112,6 +118,38 @@ Item {
         if (source.toString().length === 0) {
             back.source = ""
         }
+        resolveDeezer()
+    }
+    onArtistChanged: resolveDeezer()
+    onTitleChanged: resolveDeezer()
+    onAlbumNameChanged: resolveDeezer()
+    onArtworkKindChanged: resolveDeezer()
+
+    Component.onCompleted: resolveDeezer()
+
+    function resolveDeezer() {
+        if (artist.length === 0 && albumName.length === 0) return
+        const query = artworkKind === 1 ? artist
+                    : artworkKind === 2 ? (artist + " " + albumName)
+                    : (artist + " " + title)
+        if (query.trim().length === 0 || query === deezerQuery) return
+        deezerQuery = query
+        const base = artworkKind === 1 ? "https://api.deezer.com/search/artist"
+                   : artworkKind === 2 ? "https://api.deezer.com/search/album"
+                   : "https://api.deezer.com/search"
+        const request = new XMLHttpRequest()
+        request.open("GET", base + "?q=" + encodeURIComponent(query) + "&limit=1")
+        request.onreadystatechange = function() {
+            if (request.readyState !== XMLHttpRequest.DONE || request.status !== 200) return
+            const data = JSON.parse(request.responseText).data || []
+            if (data.length === 0) return
+            const item = data[0]
+            const url = artworkKind === 1 ? item.picture_xl
+                      : artworkKind === 2 ? item.cover_xl
+                      : (item.album ? item.album.cover_xl : "")
+            if (url) deezerSource = url
+        }
+        request.send()
     }
 
     function artworkUrl(url: url): string {
@@ -203,7 +241,7 @@ Item {
             visible: false
             asynchronous: true
             cache: root.cache
-            source: root.artworkUrl(root.source)
+            source: root.artworkUrl(root.deezerSource.toString().length > 0 ? root.deezerSource : root.source)
             sourceSize: Qt.size(root.pixelSize, root.pixelSize)
             onStatusChanged: {
                 if (status === Image.Error) {

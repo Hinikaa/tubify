@@ -187,6 +187,9 @@ Item {
                 squiggleFollowsPlayback: true
                 squiggleColor: PlayerStyle.primary
                 source: Player.currentSong.artworkUrl
+                artist: Player.currentSong.artists
+                title: Player.currentSong.name
+                albumName: Player.currentSong.albumName
                 crossfade: true
                 revealDuration: Player.crossfadeMs
             }

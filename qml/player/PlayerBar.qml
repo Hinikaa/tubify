@@ -217,6 +217,9 @@ Item {
                 anchors.fill: parent
                 radius: Appearance.sizes.smallArtworkRadius
                 source: Player.currentSong.artworkUrl
+                artist: Player.currentSong.artists
+                title: Player.currentSong.name
+                albumName: Player.currentSong.albumName
                 crossfade: true
             }
 

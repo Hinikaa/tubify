@@ -257,16 +257,6 @@ impl Profile {
     }
 }
 
-fn high_resolution(url: &str) -> String {
-    if let Some((base, suffix)) = url.rsplit_once('=') {
-        if suffix.starts_with('w') || suffix.starts_with('s') {
-            let size = if suffix.starts_with('s') { "s1200" } else { "w1200-h1200-l90-rj" };
-            return format!("{base}={size}");
-        }
-    }
-    url.to_owned()
-}
-
 pub fn images_json(thumbnails: &[Thumbnail], width: u32) -> Value {
     let mut chosen: Vec<&Thumbnail> = thumbnails.iter().collect();
     chosen.sort_by_key(|thumbnail| thumbnail.width);
@@ -274,7 +264,7 @@ pub fn images_json(thumbnails: &[Thumbnail], width: u32) -> Value {
     let mut out = Vec::new();
     if let Some(preferred) = preferred {
         out.push(json!({
-            "url": high_resolution(&preferred.url),
+            "url": preferred.url,
             "width": preferred.width.max(width),
             "height": preferred.height.max(width),
         }));
@@ -284,7 +274,7 @@ pub fn images_json(thumbnails: &[Thumbnail], width: u32) -> Value {
             continue;
         }
         out.push(json!({
-            "url": high_resolution(&thumbnail.url),
+            "url": thumbnail.url,
             "width": thumbnail.width,
             "height": thumbnail.height,
         }));

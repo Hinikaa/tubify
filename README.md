@@ -13,7 +13,7 @@ A native desktop client built with Qt Quick and a Rust core.
 [![license](https://img.shields.io/badge/license-GPL--3.0-8f6cff?style=for-the-badge&labelColor=1d1b20)](LICENSE)
 [![release](https://img.shields.io/github/v/release/Hinikaa/tubify?style=for-the-badge&color=6750a4&labelColor=1d1b20)](https://github.com/Hinikaa/tubify/releases/latest)
 
-**[install](#install) · [build](#build) · [first run](#first-run) · [last.fm](#lastfm) · [discord](#discord) · [limits](#notes-and-limits)**
+**[screenshots](#screenshots) · [install](#install) · [build](#build) · [first run](#first-run) · [last.fm](#lastfm) · [discord](#discord) · [limits](#notes-and-limits)**
 
 <img src="assets/immersive-tubify.png" alt="Tubify immersive player">
 
@@ -33,30 +33,95 @@ local files, stats and queue are all still here.
 There is no Spotify Premium requirement, no Spotify client ID, and no Spotify
 account. A normal YouTube Music account is enough.
 
+Tubify is unofficial and is not affiliated with YouTube or Google.
 
+## screenshots
+
+<details open>
+<summary><b>Immersive player</b> · lyrics and visualizer</summary>
+<br>
+
+<table>
+  <tr>
+    <td><img src="assets/lyrics.png" alt="immersive player with synced lyrics and bar visualizer" width="480"></td>
+    <td><img src="assets/visualizer.png" alt="immersive player with the bar visualizer" width="480"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>synced lyrics, the line being sung lit up</sub></td>
+    <td align="center"><sub>the cover, the seek line and the visualizer</sub></td>
+  </tr>
+</table>
+
+</details>
+
+<details>
+<summary><b>Compact player</b> · the narrow layout</summary>
+<br>
+
+<img src="assets/player.png" alt="the player in its narrow layout" width="320">
+
+</details>
+
+<details>
+<summary><b>Settings</b> · Discord</summary>
+<br>
+
+<img src="assets/discord-settings.png" alt="Discord rich presence settings" width="520">
+
+</details>
 
 ## what you get
+
+<details open>
+<summary><b>Library and browsing</b></summary>
+<br>
 
 - Home, search, liked songs, playlists, albums and artist pages from your own
   YouTube Music account
 - Playlist editing: create, rename, describe, add, remove, reorder, delete
-- Synced lyrics from LRCLIB, with YouTube Music's lyrics as a fallback
-- Immersive player, queue, sleep timer and crossfade
-- Equalizer, tempo/pitch, preamp and volume normalization
-- Visualizers and the living backdrop
 - Local files with tag editing and local playlists
 - Listening stats from stats.fm, Last.fm, or the plays kept on this computer
+
+</details>
+
+<details>
+<summary><b>Playback and sound</b></summary>
+<br>
+
+- Immersive player, queue, sleep timer and crossfade
+- Equalizer, tempo/pitch, preamp and volume normalization
+- Bitrate and sample rate of the playing file, shown under the title
+- Synced lyrics from LRCLIB, with YouTube Music's lyrics as a fallback
+- Visualizers and the living backdrop
+
+</details>
+
+<details>
+<summary><b>Integrations</b></summary>
+<br>
+
 - Last.fm scrobbling, connected from Settings
-- Discord rich presence and MPRIS
+- Discord rich presence, with covers for local files too
+- MPRIS
 - A **DNS resolver** switch in Settings that keeps sponsored shelves and
   promoted placements out of the library answers
+
+</details>
+
+<details>
+<summary><b>Artwork</b></summary>
+<br>
 
 The player and song rows use Deezer artwork when it is available, and fall
 back to YouTube Music's own artwork. The Last.fm rows do the same.
 
-Tubify is unofficial and is not affiliated with YouTube or Google.
+</details>
 
 ## before you start
+
+<details>
+<summary><b>What you need</b></summary>
+<br>
 
 - **A YouTube Music account.** Free is fine. No Premium and no developer app.
 - **A way to sign in.** The setup screen can read the login from Helium,
@@ -68,23 +133,68 @@ Tubify is unofficial and is not affiliated with YouTube or Google.
 - **Optional: Last.fm.** Reading stats needs only a username. Scrobbling needs
   a one-time connect in Settings.
 
+</details>
+
 ## install
 
 Grab the latest build from the [releases page](https://github.com/Hinikaa/tubify/releases/latest).
 
-| platform | file | how to run |
-|---|---|---|
-| Linux portable | `tubify-0.1.0-linux-x86_64.zip` | unzip anywhere, run `bin/tubify`. No install step. |
-| Linux portable | `tubify-0.1.0-linux-x86_64.tar.gz` | extract anywhere, run `bin/tubify`. |
-| Debian / Ubuntu | `tubify_0.1.0_amd64.deb` | `sudo apt install ./tubify_0.1.0_amd64.deb` |
-| macOS Apple Silicon | `tubify-0.1.0-macos-arm64.dmg` | drag to Applications. Ad-hoc signed: use Open Anyway, or `xattr -dr com.apple.quarantine /Applications/Tubify.app`. |
-| Windows x64 | `tubify-0.1.0-windows-x86_64.zip` | extract, run `bin\swiftify.exe`. SmartScreen: More info → Run anyway. |
+<details>
+<summary><b>Linux</b> · portable zip, tarball, or .deb</summary>
+<br>
 
-The Linux builds bundle Qt and most libraries. `yt-dlp` and `ffmpeg` are still needed for playback; put them on `PATH` or next to the executable. Build from source below if your distro is not covered.
+| file | how to run |
+|---|---|
+| `tubify-0.1.1-linux-x86_64.zip` | unzip anywhere, run `bin/tubify`. No install step. |
+| `tubify-0.1.1-linux-x86_64.tar.gz` | extract anywhere, run `bin/tubify`. |
+| `tubify_0.1.1_amd64.deb` | `sudo apt install ./tubify_0.1.1_amd64.deb` |
+
+The Linux builds bundle Qt and most libraries. `yt-dlp` and `ffmpeg` are still
+needed for playback; put them on `PATH` or next to the executable.
+
+Building from source? The repo ships a `.desktop` file and icons in
+`packaging/`. Install the binary somewhere on your `PATH` and copy
+`packaging/tubify.desktop` to `~/.local/share/applications/`.
+
+The audio core uses ALSA, and the device monitor uses PulseAudio. Almost every
+desktop already has both.
+
+</details>
+
+<details>
+<summary><b>macOS</b> · Apple Silicon</summary>
+<br>
+
+Download `tubify-0.1.1-macos-arm64.dmg` and drag Tubify to Applications.
+
+It is ad-hoc signed, not notarized, so macOS will block the first launch. Open
+**System Settings → Privacy & Security** and choose **Open Anyway**, or run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Tubify.app
+```
+
+</details>
+
+<details>
+<summary><b>Windows</b> · x64</summary>
+<br>
+
+Download `tubify-0.1.1-windows-x86_64.zip`, extract it, and run
+`bin\swiftify.exe`.
+
+The exe is not signed, so SmartScreen may show “Windows protected your PC”.
+Choose **More info → Run anyway**.
+
+Keep `yt-dlp.exe` and `ffmpeg.exe` next to the executable or on `PATH`.
+
+</details>
 
 ## build
 
-### what you need
+<details>
+<summary><b>What you need</b></summary>
+<br>
 
 - Qt **6.10 or newer** (Core, Gui, Network, Concurrent, Qml, Quick,
   QuickControls2, ShaderTools)
@@ -101,7 +211,11 @@ time. Turn that off with `-DSWIFTIFY_DOWNLOAD_ICON_FONT=OFF` and
 `-DSWIFTIFY_DOWNLOAD_INTERFACE_FONT=OFF` if you would rather supply them
 yourself.
 
-### Linux
+</details>
+
+<details>
+<summary><b>Linux</b></summary>
+<br>
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -123,7 +237,34 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$HOME/.local"
 ```
 
-### macOS
+</details>
+
+<details>
+<summary><b>Linux</b> · faster rebuilds</summary>
+<br>
+
+The first build is slow; the rest need not be. With Ninja, ccache and lld:
+
+```sh
+sudo pacman -S ccache
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+  -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
+cmake --build build -j"$(nproc)"
+```
+
+For day-to-day work, the Rust core can skip thin LTO to build quicker:
+
+```sh
+CARGO_PROFILE_RELEASE_LTO=off CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 \
+  cmake --build build -j"$(nproc)"
+```
+
+</details>
+
+<details>
+<summary><b>macOS</b></summary>
+<br>
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -148,7 +289,11 @@ cpack --config build/CPackConfig.cmake -G DragNDrop
 Signing and notarization are optional. See `packaging/macos/` for the bundle
 metadata and entitlements.
 
-### Windows
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+<br>
 
 Use a Developer PowerShell and a 64-bit MSVC generator:
 
@@ -167,14 +312,18 @@ cpack --config build/CPackConfig.cmake -G NSIS
 `yt-dlp.exe` and `ffmpeg.exe` still need to be on `PATH`, or placed next to the
 executable. The installer can bundle them.
 
+</details>
+
 ## first run
 
 Tubify needs a YouTube Music account. There are two ways to give it one.
 
-### read the login from your browser
+<details open>
+<summary><b>Read the login from your browser</b> · the easy one</summary>
+<br>
 
-This is the easy one. Open YouTube Music in a browser where you are already
-signed in, then choose that browser on Tubify's setup screen:
+Open YouTube Music in a browser where you are already signed in, then choose
+that browser on Tubify's setup screen:
 
 **Helium · Chromium · Chrome · Brave · Firefox**
 
@@ -182,7 +331,11 @@ Tubify reads the cookie from that browser's own profile with `yt-dlp`. Close
 the browser first if its cookie database is locked. Nothing is uploaded; the
 cookie is kept on this computer and used for YouTube Music requests.
 
-### paste the cookie yourself
+</details>
+
+<details>
+<summary><b>Paste the cookie yourself</b></summary>
+<br>
 
 1. Open [music.youtube.com](https://music.youtube.com) and sign in.
 2. Press `F12`, open **Network**, and reload the page.
@@ -193,12 +346,16 @@ cookie is kept on this computer and used for YouTube Music requests.
 The login is kept in Tubify's app-data folder, readable only by your user.
 Nothing is sent anywhere except to YouTube Music.
 
+</details>
+
 ## last.fm
 
 The stats page can read a public Last.fm profile with just a username. It uses
 a shared app key, so there is no API key to create.
 
-To send plays to Last.fm:
+<details>
+<summary><b>Send plays to Last.fm</b> · scrobbling</summary>
+<br>
 
 1. Open **Settings → Listening Stats**.
 2. Choose **Last.fm**.
@@ -209,29 +366,86 @@ To send plays to Last.fm:
 Scrobbles are sent when a play is recorded (after 30 seconds or half the
 track). Last.fm itself can take a minute or two to show them.
 
+</details>
+
 ## discord
 
 Rich presence is one toggle in Settings. It uses a shared Discord app, so you
 do not need to create an application or paste an ID. The song, artist, progress
 and album art are shared while something is playing.
 
+<details>
+<summary><b>Covers for local files</b></summary>
+<br>
+
+Discord only shows images from the internet, never a file on your disk. For a
+local song, Tubify looks its cover up on Deezer by artist and title and shows
+that. Only the artist and title are sent, never the file name or path. If
+Deezer has no match, the track, artist and progress still show without a cover.
+
+</details>
+
 ## if something breaks
 
-- **The browser login does nothing.** Close the browser completely, then try
-  again. Chromium-based browsers lock their cookie database while they run.
-- **Playback says it cannot fetch the song.** Check that `yt-dlp` and `ffmpeg`
-  are the system binaries, not an old pipx copy. `yt-dlp --version` should be
-  recent enough to know YouTube's current player.
-- **A song 403s once and then works.** YouTube occasionally rotates a stream.
-  Retrying usually fixes it.
-- **Scrobbles are late.** Tubify sends them as soon as a play is recorded;
-  Last.fm's own ingest can lag by a minute or two.
-- **Discord artwork is missing.** Discord does not always accept external
-  artwork URLs. The track, artist and progress should still show.
-- **macOS says the app is damaged.** It is the quarantine flag, not a broken
-  build. Use the `xattr` command above.
+<details>
+<summary><b>The browser login does nothing</b></summary>
+<br>
+
+Close the browser completely, then try again. Chromium-based browsers lock
+their cookie database while they run.
+
+</details>
+
+<details>
+<summary><b>Playback says it cannot fetch the song</b></summary>
+<br>
+
+Check that `yt-dlp` and `ffmpeg` are the system binaries, not an old pipx copy.
+`yt-dlp --version` should be recent enough to know YouTube's current player.
+
+</details>
+
+<details>
+<summary><b>A song 403s once and then works</b></summary>
+<br>
+
+YouTube occasionally rotates a stream. Retrying usually fixes it.
+
+</details>
+
+<details>
+<summary><b>Scrobbles are late</b></summary>
+<br>
+
+Tubify sends them as soon as a play is recorded; Last.fm's own ingest can lag
+by a minute or two.
+
+</details>
+
+<details>
+<summary><b>Discord artwork is missing</b></summary>
+<br>
+
+Discord does not always accept external artwork URLs, and a local song's cover
+depends on Deezer finding a match for its artist and title. The track, artist
+and progress should still show.
+
+</details>
+
+<details>
+<summary><b>macOS says the app is damaged</b></summary>
+<br>
+
+It is the quarantine flag, not a broken build. Use the `xattr` command in the
+macOS install section above.
+
+</details>
 
 ## notes and limits
+
+<details>
+<summary><b>Things Tubify cannot do</b></summary>
+<br>
 
 - YouTube Music does not let an app set a playlist's own cover, so that action
   reports that instead of pretending to work.
@@ -241,8 +455,12 @@ and album art are shared while something is playing.
   library but cannot fetch a song.
 - YouTube Music tops out at 256 kbps. There is no lossless or "HD audio" tier.
   The quality setting is Normal (128), High (256), or Best available.
+- The bitrate shown in the player is the downloaded file's average, not a live
+  reading.
 - Closing the window quits by default. Turn on **Keep running in background**
   in Settings if you want it to hide and keep playing.
+
+</details>
 
 ## credits
 

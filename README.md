@@ -12,6 +12,10 @@ A native desktop client built with Qt Quick and a Rust core.
 [![rust](https://img.shields.io/badge/core-rust-dea584?style=for-the-badge&logo=rust&logoColor=white&labelColor=1d1b20)](ytmusic-core)
 [![license](https://img.shields.io/badge/license-GPL--3.0-8f6cff?style=for-the-badge&labelColor=1d1b20)](LICENSE)
 
+**[install](#install) · [build](#build) · [first run](#first-run) · [last.fm](#lastfm) · [discord](#discord) · [limits](#notes-and-limits)**
+
+<img src="assets/home.png" alt="Tubify home view">
+
 </div>
 
 ## why another one
@@ -24,6 +28,20 @@ It started as a fork of [Swiftify](https://github.com/swiftify-org/swiftify),
 keeping its Material 3 Expressive shell and replacing the Spotify backend with
 YouTube Music. The equalizer, immersive player, synced lyrics, visualizers,
 local files, stats and queue are all still here.
+
+There is no Spotify Premium requirement, no Spotify client ID, and no Spotify
+account. A normal YouTube Music account is enough.
+
+<table>
+  <tr>
+    <td><img src="assets/eq.png" alt="equalizer, tempo and pitch settings" width="400"></td>
+    <td><img src="assets/immersive.png" alt="immersive player with visualizer and lyrics" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center">equalizer, tempo and pitch</td>
+    <td align="center">immersive player with the visualizer and lyrics</td>
+  </tr>
+</table>
 
 ## what you get
 
@@ -46,18 +64,59 @@ back to YouTube Music's own artwork. The Last.fm rows do the same.
 
 Tubify is unofficial and is not affiliated with YouTube or Google.
 
+## before you start
+
+- **A YouTube Music account.** Free is fine. No Premium and no developer app.
+- **A way to sign in.** The setup screen can read the login from Helium,
+  Chromium, Chrome, Brave or Firefox. If that does not work, you can paste the
+  `Cookie` header by hand.
+- **`yt-dlp` and `ffmpeg`.** Playback downloads through `yt-dlp` and decodes
+  with `ffmpeg`. Without them the app still browses your library, but it cannot
+  fetch a song.
+- **Optional: Last.fm.** Reading stats needs only a username. Scrobbling needs
+  a one-time connect in Settings.
+
 ## install
 
-There are no public packages yet. Build it from source for now:
+There are no public packages yet. Build it from source for now.
 
-- **Linux** — see the Linux build below. A `.desktop` file and icons are in
-  `packaging/`.
-- **macOS** — build a `.app` with the macOS instructions below.
-- **Windows** — build with MSVC and package with CPack; see the Windows
-  instructions below.
+<details>
+<summary><b>Linux</b></summary>
+<br>
 
-macOS and Windows support is being finished. Linux is the daily driver and the
-most tested platform.
+Build with the Linux commands below. The repo ships a `.desktop` file and
+icons in `packaging/`. Install the binary somewhere on your `PATH` and copy
+`packaging/tubify.desktop` to `~/.local/share/applications/`.
+
+The audio core uses ALSA, and the device monitor uses PulseAudio. Almost every
+desktop already has both.
+
+</details>
+
+<details>
+<summary><b>macOS</b></summary>
+<br>
+
+Build the `.app` with the macOS commands below. It is not notarized, so macOS
+will block the first launch. Open **System Settings → Privacy & Security** and
+choose **Open Anyway**, or run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Tubify.app
+```
+
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+<br>
+
+Build with MSVC and package with CPack. The exe is not signed, so SmartScreen
+may show “Windows protected your PC”. Choose **More info → Run anyway**.
+
+Keep `yt-dlp.exe` and `ffmpeg.exe` next to the executable or on `PATH`.
+
+</details>
 
 ## build
 
@@ -146,7 +205,7 @@ executable. The installer can bundle them.
 
 ## first run
 
-Tubify needs a YouTube Music account. There are two ways to give it one:
+Tubify needs a YouTube Music account. There are two ways to give it one.
 
 ### read the login from your browser
 
@@ -191,6 +250,22 @@ track). Last.fm itself can take a minute or two to show them.
 Rich presence is one toggle in Settings. It uses a shared Discord app, so you
 do not need to create an application or paste an ID. The song, artist, progress
 and album art are shared while something is playing.
+
+## if something breaks
+
+- **The browser login does nothing.** Close the browser completely, then try
+  again. Chromium-based browsers lock their cookie database while they run.
+- **Playback says it cannot fetch the song.** Check that `yt-dlp` and `ffmpeg`
+  are the system binaries, not an old pipx copy. `yt-dlp --version` should be
+  recent enough to know YouTube's current player.
+- **A song 403s once and then works.** YouTube occasionally rotates a stream.
+  Retrying usually fixes it.
+- **Scrobbles are late.** Tubify sends them as soon as a play is recorded;
+  Last.fm's own ingest can lag by a minute or two.
+- **Discord artwork is missing.** Discord does not always accept external
+  artwork URLs. The track, artist and progress should still show.
+- **macOS says the app is damaged.** It is the quarantine flag, not a broken
+  build. Use the `xattr` command above.
 
 ## notes and limits
 

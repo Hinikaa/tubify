@@ -81,6 +81,8 @@ class Settings : public QObject {
     Q_PROPERTY(QString statsFmUsername READ statsFmUsername WRITE setStatsFmUsername NOTIFY statsFmUsernameChanged FINAL)
     Q_PROPERTY(QString lastFmUsername READ lastFmUsername WRITE setLastFmUsername NOTIFY lastFmUsernameChanged FINAL)
     Q_PROPERTY(QString lastFmApiKey READ lastFmApiKey WRITE setLastFmApiKey NOTIFY lastFmApiKeyChanged FINAL)
+    Q_PROPERTY(QString lastFmSessionKey READ lastFmSessionKey WRITE setLastFmSessionKey NOTIFY lastFmSessionKeyChanged FINAL)
+    Q_PROPERTY(bool lastFmScrobbling READ lastFmScrobbling WRITE setLastFmScrobbling NOTIFY lastFmScrobblingChanged FINAL)
     /// whether songs played here are kept for the local stats
     Q_PROPERTY(bool trackListening READ trackListening WRITE setTrackListening NOTIFY trackListeningChanged FINAL)
     Q_PROPERTY(bool nativeTitleBar READ nativeTitleBar WRITE setNativeTitleBar NOTIFY nativeTitleBarChanged FINAL)
@@ -201,6 +203,10 @@ public:
     void setLastFmUsername(const QString &value);
     QString lastFmApiKey() const { return m_lastFmApiKey; }
     void setLastFmApiKey(const QString &value);
+    QString lastFmSessionKey() const { return m_lastFmSessionKey; }
+    void setLastFmSessionKey(const QString &value);
+    bool lastFmScrobbling() const { return m_lastFmScrobbling; }
+    void setLastFmScrobbling(bool value);
     bool trackListening() const { return m_trackListening; }
     void setTrackListening(bool value);
     void setWindowControlsOnRight(bool value);
@@ -266,6 +272,8 @@ signals:
     void statsFmUsernameChanged();
     void lastFmUsernameChanged();
     void lastFmApiKeyChanged();
+    void lastFmSessionKeyChanged();
+    void lastFmScrobblingChanged();
     void trackListeningChanged();
     void nativeTitleBarChanged();
     void trayIconChanged();
@@ -316,6 +324,8 @@ private:
     QString m_statsFmUsername;
     QString m_lastFmUsername;
     QString m_lastFmApiKey;
+    QString m_lastFmSessionKey;
+    bool m_lastFmScrobbling = false;
     bool m_trackListening = true;
 #ifdef Q_OS_WIN
     bool m_nativeTitleBar = false;

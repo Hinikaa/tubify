@@ -17,6 +17,7 @@
  */
 
 #include "stats/StatsStore.h"
+#include <QDesktopServices>
 
 #include "app/Paths.h"
 #include "app/Settings.h"
@@ -102,6 +103,15 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
         connect(m_history, &PlayHistory::recorded, this, [this] {
             emit historyChanged();
             m_localRefresh.start();
+            if (m_settings && m_settings->lastFmScrobbling() && !m_settings->lastFmSessionKey().isEmpty()) {
+                const auto records = m_history->records();
+                if (!records.isEmpty()) {
+                    const auto &record = records.last();
+                    detach(m_lastFm.scrobble(m_settings->lastFmSessionKey(), record.song.artists,
+                                             record.song.name, record.song.albumName,
+                                             record.song.durationMs / 1000, record.startedAt.toSecsSinceEpoch()));
+                }
+            }
         });
     }
     if (m_settings) {
@@ -201,6 +211,27 @@ QString StatsStore::lastFmApiKey() const
     return m_settings ? m_settings->lastFmApiKey() : QString();
 }
 
+bool StatsStore::lastFmConnected() const
+{
+    return m_settings && !m_settings->lastFmSessionKey().isEmpty();
+}
+
+bool StatsStore::lastFmScrobbling() const
+{
+    return m_settings && m_settings->lastFmScrobbling();
+}
+
+void StatsStore::setLastFmScrobbling(bool value)
+{
+    if (m_settings) m_settings->setLastFmScrobbling(value);
+    emit sourceChanged();
+}
+
+bool StatsStore::lastFmLoginPending() const
+{
+    return !m_lastFmToken.isEmpty();
+}
+
 void StatsStore::setLastFmApiKey(const QString &key)
 {
     if (m_settings) m_settings->setLastFmApiKey(key);
@@ -291,6 +322,53 @@ void StatsStore::setError(const QString &message)
         m_errorMessage = message;
         emit errorChanged();
     }
+}
+
+void StatsStore::connectLastFm()
+{
+    detach(connectLastFmAsync());
+}
+
+QCoro::Task<> StatsStore::connectLastFmAsync()
+{
+    try {
+        m_lastFmToken = co_await m_lastFm.requestToken();
+        QDesktopServices::openUrl(QUrl(LastFmClient::authUrl(m_lastFmToken)));
+        emit sourceChanged();
+    } catch (const StatsFmError &error) {
+        setError(error.message());
+    }
+}
+
+void StatsStore::finishLastFmLogin()
+{
+    detach(finishLastFmLoginAsync());
+}
+
+QCoro::Task<> StatsStore::finishLastFmLoginAsync()
+{
+    if (m_lastFmToken.isEmpty()) co_return;
+    try {
+        const QString key = co_await m_lastFm.sessionKey(m_lastFmToken);
+        if (!key.isEmpty() && m_settings) {
+            m_settings->setLastFmSessionKey(key);
+            m_settings->setLastFmScrobbling(true);
+        }
+        m_lastFmToken.clear();
+        emit sourceChanged();
+    } catch (const StatsFmError &error) {
+        setError(error.message());
+    }
+}
+
+void StatsStore::disconnectLastFm()
+{
+    if (m_settings) {
+        m_settings->setLastFmSessionKey({});
+        m_settings->setLastFmScrobbling(false);
+    }
+    m_lastFmToken.clear();
+    emit sourceChanged();
 }
 
 void StatsStore::refresh()

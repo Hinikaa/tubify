@@ -197,6 +197,8 @@ void Settings::load()
     m_statsFmUsername = stored<QString>(m_store, "statsFmUsername", m_statsFmUsername).trimmed();
     m_lastFmUsername = stored<QString>(m_store, "lastFmUsername", m_lastFmUsername).trimmed();
     m_lastFmApiKey = stored<QString>(m_store, "lastFmApiKey", m_lastFmApiKey).trimmed();
+    m_lastFmSessionKey = stored<QString>(m_store, "lastFmSessionKey", m_lastFmSessionKey);
+    m_lastFmScrobbling = stored<bool>(m_store, "lastFmScrobbling", m_lastFmScrobbling);
     m_trackListening = stored<bool>(m_store, "trackListening", m_trackListening);
     m_nativeTitleBar = stored<bool>(m_store, "nativeTitleBar", m_nativeTitleBar);
     m_trayIcon = stored<bool>(m_store, "trayIcon", m_trayIcon);
@@ -587,6 +589,22 @@ void Settings::setLastFmApiKey(const QString &value)
     m_lastFmApiKey = trimmed;
     m_store.setValue(QStringLiteral("lastFmApiKey"), trimmed);
     emit lastFmApiKeyChanged();
+}
+
+void Settings::setLastFmSessionKey(const QString &value)
+{
+    if (m_lastFmSessionKey == value) return;
+    m_lastFmSessionKey = value;
+    m_store.setValue(QStringLiteral("lastFmSessionKey"), value);
+    emit lastFmSessionKeyChanged();
+}
+
+void Settings::setLastFmScrobbling(bool value)
+{
+    if (m_lastFmScrobbling == value) return;
+    m_lastFmScrobbling = value;
+    m_store.setValue(QStringLiteral("lastFmScrobbling"), value);
+    emit lastFmScrobblingChanged();
 }
 
 void Settings::setTrackListening(bool value)

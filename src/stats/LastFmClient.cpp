@@ -18,6 +18,7 @@
 
 #include "stats/LastFmClient.h"
 
+#include <QCryptographicHash>
 #include <QDate>
 #include <QDateTime>
 #include <QTime>
@@ -42,7 +43,8 @@ namespace {
 const QString kApiBase = QStringLiteral("https://ws.audioscrobbler.com/2.0/");
 // MusicBrainz Picard's public app key: a shared default so Last.fm works
 // without the person registering an application. a key in Settings overrides it.
-const QString kDefaultApiKey = QStringLiteral("0a210a4a6741f2ec8f27a791b9d5d971");
+const QString kDefaultApiKey = QStringLiteral("9e89b44de1ff37c5246ad0af18406454");
+const QString kDefaultApiSecret = QStringLiteral("147320ea9b8930fe196a4231da50ada4");
 
 QString textOf(const QJsonValue &value)
 {
@@ -137,21 +139,13 @@ QString LastFmClient::periodName(StatsPeriod period)
     return QStringLiteral("1month");
 }
 
-QCoro::Task<QJsonObject> LastFmClient::get(QString method, QString apiKey, QUrlQuery query)
+QCoro::Task<QJsonObject> LastFmClient::getUrl(QUrl url)
 {
-    QUrl url(kApiBase);
-    query.addQueryItem(QStringLiteral("method"), method);
-    query.addQueryItem(QStringLiteral("api_key"), apiKey.trimmed().isEmpty() ? kDefaultApiKey : apiKey);
-    query.addQueryItem(QStringLiteral("format"), QStringLiteral("json"));
-    url.setQuery(query);
-
     QNetworkRequest request(url);
     request.setRawHeader("Accept", "application/json");
     request.setTransferTimeout(15'000);
-
     std::unique_ptr<QNetworkReply> reply(m_network->get(request));
     co_await qCoro(reply.get()).waitForFinished();
-
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QByteArray data = reply->readAll();
     if (status == 0) {
@@ -162,31 +156,77 @@ QCoro::Task<QJsonObject> LastFmClient::get(QString method, QString apiKey, QUrlQ
         throw StatsFmError(StatsFmError::Kind::Other,
                            QStringLiteral("Last.fm answered with HTTP %1.").arg(status));
     }
-
     const QJsonObject object = QJsonDocument::fromJson(data).object();
     if (object.contains(QStringLiteral("error"))) {
         const int code = object.value(QStringLiteral("error")).toInt();
         const QString message = object.value(QStringLiteral("message")).toString();
-        switch (code) {
-        case 6:
-            throw StatsFmError(StatsFmError::Kind::NotFound,
-                               QStringLiteral("Last.fm has no user by that name."));
-        case 10:
-        case 13:
-            throw StatsFmError(StatsFmError::Kind::Other,
-                               QStringLiteral("Last.fm rejected the API key. Check it in Settings."));
-        case 17:
-            throw StatsFmError(StatsFmError::Kind::Private,
-                               QStringLiteral("This Last.fm user keeps their listening private."));
-        case 29:
-            throw StatsFmError(StatsFmError::Kind::RateLimited,
-                               QStringLiteral("Last.fm is busy. Try again in a minute."));
-        default:
-            throw StatsFmError(StatsFmError::Kind::Other,
-                               message.isEmpty() ? QStringLiteral("Last.fm refused the request.") : message);
-        }
+        if (code == 6) throw StatsFmError(StatsFmError::Kind::NotFound, QStringLiteral("Last.fm has no user by that name."));
+        if (code == 10 || code == 13) throw StatsFmError(StatsFmError::Kind::Other, QStringLiteral("Last.fm rejected the app key."));
+        if (code == 17) throw StatsFmError(StatsFmError::Kind::Private, QStringLiteral("This Last.fm user keeps their listening private."));
+        if (code == 29) throw StatsFmError(StatsFmError::Kind::RateLimited, QStringLiteral("Last.fm is busy. Try again in a minute."));
+        throw StatsFmError(StatsFmError::Kind::Other,
+                           message.isEmpty() ? QStringLiteral("Last.fm refused the request.") : message);
     }
     co_return object;
+}
+
+QCoro::Task<QJsonObject> LastFmClient::get(QString method, QString apiKey, QUrlQuery query)
+{
+    query.addQueryItem(QStringLiteral("method"), method);
+    query.addQueryItem(QStringLiteral("api_key"), apiKey.trimmed().isEmpty() ? kDefaultApiKey : apiKey);
+    query.addQueryItem(QStringLiteral("format"), QStringLiteral("json"));
+    QUrl url(kApiBase);
+    url.setQuery(query);
+    co_return co_await getUrl(url);
+}
+
+QCoro::Task<QJsonObject> LastFmClient::getSigned(QString method, QUrlQuery query, QString sessionKey)
+{
+    query.addQueryItem(QStringLiteral("method"), method);
+    query.addQueryItem(QStringLiteral("api_key"), kDefaultApiKey);
+    if (!sessionKey.isEmpty()) query.addQueryItem(QStringLiteral("sk"), sessionKey);
+    QList<QPair<QString, QString>> items = query.queryItems();
+    std::sort(items.begin(), items.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
+    QString signature;
+    for (const auto &item : items) signature += item.first + item.second;
+    signature += kDefaultApiSecret;
+    query.addQueryItem(QStringLiteral("api_sig"),
+                       QString::fromLatin1(QCryptographicHash::hash(signature.toUtf8(), QCryptographicHash::Md5).toHex()));
+    query.addQueryItem(QStringLiteral("format"), QStringLiteral("json"));
+    QUrl url(kApiBase);
+    url.setQuery(query);
+    co_return co_await getUrl(url);
+}
+
+QCoro::Task<QString> LastFmClient::requestToken()
+{
+    const QJsonObject object = co_await getSigned(QStringLiteral("auth.getToken"), {});
+    co_return object.value(QStringLiteral("token")).toString();
+}
+
+QCoro::Task<QString> LastFmClient::sessionKey(QString token)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("token"), token);
+    const QJsonObject object = co_await getSigned(QStringLiteral("auth.getSession"), query);
+    co_return object.value(QStringLiteral("session")).toObject().value(QStringLiteral("key")).toString();
+}
+
+QString LastFmClient::authUrl(const QString &token)
+{
+    return QStringLiteral("https://www.last.fm/api/auth/?api_key=%1&token=%2").arg(kDefaultApiKey, token);
+}
+
+QCoro::Task<> LastFmClient::scrobble(QString sessionKey, QString artist, QString title, QString album,
+                                     int durationSeconds, qint64 timestamp)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("artist"), artist);
+    query.addQueryItem(QStringLiteral("track"), title);
+    if (!album.isEmpty()) query.addQueryItem(QStringLiteral("album"), album);
+    query.addQueryItem(QStringLiteral("duration"), QString::number(durationSeconds));
+    query.addQueryItem(QStringLiteral("timestamp"), QString::number(timestamp));
+    co_await getSigned(QStringLiteral("track.scrobble"), query, sessionKey);
 }
 
 QCoro::Task<StatsFmProfile> LastFmClient::profile(QString username, QString apiKey)

@@ -793,6 +793,42 @@ Item {
                     }
                 }
                 ConfigSwitch {
+                    text: qsTr("Scrobble plays to Last.fm")
+                    checked: Stats.lastFmScrobbling
+                    enabled: Stats.lastFmConnected
+                    onToggledTo: (checked) => Stats.lastFmScrobbling = checked
+                }
+                Flow {
+                    x: 8
+                    width: parent.width - 16
+                    spacing: 8
+                    TextButton {
+                        visible: !Stats.lastFmConnected && !Stats.lastFmLoginPending
+                        variant: TextButton.Tonal
+                        symbol: "link"
+                        text: qsTr("Connect Last.fm")
+                        onClicked: Stats.connectLastFm()
+                    }
+                    TextButton {
+                        visible: Stats.lastFmLoginPending
+                        variant: TextButton.Tonal
+                        symbol: "check"
+                        text: qsTr("I Approved")
+                        onClicked: Stats.finishLastFmLogin()
+                    }
+                    TextButton {
+                        visible: Stats.lastFmConnected
+                        variant: TextButton.Text
+                        symbol: "logout"
+                        text: qsTr("Disconnect")
+                        onClicked: Stats.disconnectLastFm()
+                    }
+                }
+                NoteText {
+                    text: qsTr("Connect opens Last.fm in your browser. Approve Tubify, then click I Approved. Scrobbling uses the shared app.")
+                }
+
+                ConfigSwitch {
                     text: qsTr("Keep track of what I listen to")
                     checked: Stats.tracking
                     onToggledTo: (checked) => Stats.tracking = checked

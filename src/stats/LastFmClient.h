@@ -30,19 +30,26 @@ class QNetworkAccessManager;
 
 namespace swiftify {
 
-/// Last.fm's public read api: a username and the user's own api key are all
-/// it needs. it answers in the same snapshot the stats page already draws.
+/// Last.fm's public api: reads need a key, writes need a session key. the
+/// default key/secret are Last.fm Desktop's public GPL pair, so reading and
+/// scrobbling work without the person registering an application.
 class LastFmClient {
 public:
     explicit LastFmClient(QNetworkAccessManager *network);
 
-    /// trimmed, a profile link reduced to its last part, a leading @ removed
     static QString normalizeUsername(const QString &raw);
-    /// Last.fm's name for a period: 7day, 1month, 6month or overall
     static QString periodName(StatsPeriod period);
 
     QCoro::Task<StatsFmProfile> profile(QString username, QString apiKey);
     QCoro::Task<StatsSnapshot> snapshot(QString username, StatsPeriod period, QString apiKey);
+
+    /// a request token for the browser login, and the session key it becomes
+    QCoro::Task<QString> requestToken();
+    QCoro::Task<QString> sessionKey(QString token);
+    static QString authUrl(const QString &token);
+    /// one play, scrobbled with the session key
+    QCoro::Task<> scrobble(QString sessionKey, QString artist, QString title, QString album,
+                           int durationSeconds, qint64 timestamp);
 
     // --- the parts of a reply, public for tests ---------------------------
     static StatEntry track(const QJsonObject &entry);
@@ -53,6 +60,8 @@ public:
 
 private:
     QCoro::Task<QJsonObject> get(QString method, QString apiKey, QUrlQuery query);
+    QCoro::Task<QJsonObject> getSigned(QString method, QUrlQuery query, QString sessionKey = {});
+    QCoro::Task<QJsonObject> getUrl(QUrl url);
     QNetworkAccessManager *m_network;
 };
 

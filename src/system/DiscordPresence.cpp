@@ -424,7 +424,9 @@ void DiscordPresence::update()
     if (!state.isEmpty()) activity.insert(QStringLiteral("state"), state);
     // Never expose local file paths, filenames, or private artwork URLs.
     if (!song.isLocalFile() && song.artworkUrl.scheme() == QLatin1StringView("https")
-        && song.artworkUrl.host() == QLatin1StringView("i.scdn.co")) {
+        && (song.artworkUrl.host() == QLatin1StringView("i.scdn.co")
+            || song.artworkUrl.host().endsWith(QLatin1StringView("googleusercontent.com"))
+            || song.artworkUrl.host() == QLatin1StringView("yt3.ggpht.com"))) {
         QJsonObject assets {{QStringLiteral("large_image"), song.artworkUrl.toString()}};
         const QString album = fitText(song.albumName);
         if (!album.isEmpty()) assets.insert(QStringLiteral("large_text"), album);

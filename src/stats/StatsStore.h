@@ -57,6 +57,9 @@ class StatsStore : public QObject {
     Q_PROPERTY(QString username READ username WRITE setUsername NOTIFY sourceChanged FINAL)
     Q_PROPERTY(QString lastFmUsername READ lastFmUsername WRITE setLastFmUsername NOTIFY sourceChanged FINAL)
     Q_PROPERTY(QString lastFmApiKey READ lastFmApiKey WRITE setLastFmApiKey NOTIFY sourceChanged FINAL)
+    Q_PROPERTY(bool lastFmConnected READ lastFmConnected NOTIFY sourceChanged FINAL)
+    Q_PROPERTY(bool lastFmScrobbling READ lastFmScrobbling WRITE setLastFmScrobbling NOTIFY sourceChanged FINAL)
+    Q_PROPERTY(bool lastFmLoginPending READ lastFmLoginPending NOTIFY sourceChanged FINAL)
     Q_PROPERTY(bool tracking READ tracking WRITE setTracking NOTIFY trackingChanged FINAL)
     /// 0 today, 1 the last four weeks, 2 the last six months, 3 all time
     Q_PROPERTY(int period READ period WRITE setPeriod NOTIFY periodChanged FINAL)
@@ -122,6 +125,10 @@ public:
     void setLastFmUsername(const QString &username);
     QString lastFmApiKey() const;
     void setLastFmApiKey(const QString &key);
+    bool lastFmConnected() const;
+    bool lastFmScrobbling() const;
+    void setLastFmScrobbling(bool value);
+    bool lastFmLoginPending() const;
     bool tracking() const;
     void setTracking(bool tracking);
     int period() const { return int(m_period); }
@@ -165,6 +172,9 @@ public:
 
     /// reads the stats again
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void connectLastFm();
+    Q_INVOKABLE void finishLastFmLogin();
+    Q_INVOKABLE void disconnectLastFm();
     /// the local history as csv in the downloads folder; the file's path, or
     /// empty when it could not be written
     Q_INVOKABLE QString exportHistory() const;
@@ -195,6 +205,8 @@ private:
     void computeLocal();
     QCoro::Task<> loadStatsFm(CancelToken token);
     QCoro::Task<> loadLastFm(CancelToken token);
+    QCoro::Task<> connectLastFmAsync();
+    QCoro::Task<> finishLastFmLoginAsync();
     QCoro::Task<> fillGenres(QStringList artistIds, CancelToken token);
     void loadGenreCache();
     void saveGenreCache() const;
@@ -211,6 +223,7 @@ private:
     QString m_errorMessage;
     StatsFmProfile m_profile;
     QString m_profileFor;
+    QString m_lastFmToken;
     StatsSnapshot m_snapshot;
     TaskSlot m_load;
     TaskSlot m_genreLoad;

@@ -1,12 +1,16 @@
 //! signing in the way music.youtube.com does: the browser's cookie, and the
 //! `SAPISIDHASH` header every authenticated request carries.
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    process::Stdio,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use reqwest::header::{CONTENT_TYPE, COOKIE, ORIGIN, REFERER, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha1::{Digest, Sha1};
+use tokio::process::Command;
 
 use super::models::{Profile, Thumbnail};
 
@@ -128,6 +132,109 @@ pub async fn sign_in(cookie: &str) -> Result<Auth, String> {
         .or_else(|| find_string(&root, "avatarUrl"))
         .unwrap_or_default();
     Ok(auth)
+}
+
+/// reads the cookie out of a browser's own profile with yt-dlp, which knows
+/// where each browser keeps it and how to unlock it, and signs in with it.
+pub async fn import_browser(browser: &str) -> Result<Auth, String> {
+    let spec = browser_spec(browser);
+    let path = std::env::temp_dir().join(format!(
+        "tubify-browser-cookies-{}.txt",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+
+    let output = Command::new("/usr/bin/yt-dlp")
+        .arg("--cookies-from-browser")
+        .arg(&spec)
+        .arg("--cookies")
+        .arg(&path)
+        .arg("--skip-download")
+        .arg("--no-warnings")
+        .arg("https://music.youtube.com/watch?v=dQw4w9WgXcQ")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|error| format!("could not start yt-dlp: {error}"))?;
+
+    // yt-dlp can fail on the page after it has already written the cookies,
+    // so the file is what decides, not the exit status.
+    let raw = std::fs::read_to_string(&path).unwrap_or_default();
+    let _ = std::fs::remove_file(&path);
+    if raw.trim().is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let line = stderr
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .unwrap_or("no cookies were written");
+        return Err(format!(
+            "Could not read {browser}'s cookies. Close the browser and try again. {}",
+            line.trim()
+        ));
+    }
+
+    let cookie = netscape_cookie_header(&raw);
+    if cookie.is_empty() {
+        return Err(format!(
+            "{browser} has no YouTube Music cookies. Sign in there first."
+        ));
+    }
+    sign_in(&cookie).await
+}
+
+/// the name yt-dlp knows a browser by, and for a chromium fork like Helium the
+/// profile directory it keeps its cookies in.
+fn browser_spec(browser: &str) -> String {
+    let name = browser.trim().to_ascii_lowercase();
+    if name == "helium" {
+        let config = std::env::var("XDG_CONFIG_HOME")
+            .map(std::path::PathBuf::from)
+            .or_else(|_| std::env::var("HOME").map(|home| std::path::PathBuf::from(home).join(".config")))
+            .ok();
+        if let Some(config) = config {
+            let profile = config.join("net.imput.helium").join("Default");
+            if profile.is_dir() {
+                return format!("chromium:{}", profile.display());
+            }
+        }
+        return "chromium".to_owned();
+    }
+    match name.as_str() {
+        "chrome" | "chromium" | "brave" | "firefox" | "edge" | "opera" | "vivaldi" => name,
+        _ => "chromium".to_owned(),
+    }
+}
+
+fn netscape_cookie_header(raw: &str) -> String {
+    let mut pairs: Vec<(String, String)> = Vec::new();
+    for line in raw.lines() {
+        let line = line.strip_prefix("#HttpOnly_").unwrap_or(line);
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+        let fields: Vec<&str> = line.split('\t').collect();
+        if fields.len() < 7 || !fields[0].contains("youtube.com") {
+            continue;
+        }
+        let name = fields[5].trim();
+        let value = fields[6].trim();
+        if name.is_empty() {
+            continue;
+        }
+        if let Some(existing) = pairs.iter_mut().find(|(known, _)| known == name) {
+            existing.1 = value.to_owned();
+        } else {
+            pairs.push((name.to_owned(), value.to_owned()));
+        }
+    }
+    pairs
+        .into_iter()
+        .map(|(name, value)| format!("{name}={value}"))
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 fn strip_cookie_prefix(raw: &str) -> &str {

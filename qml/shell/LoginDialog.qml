@@ -47,6 +47,50 @@ StyledDialog {
 
     onOpened: cookieArea.forceActiveFocus()
 
+    Flow {
+        width: parent.width
+        spacing: 8
+
+        TextButton {
+            text: qsTr("Helium")
+            symbol: "travel_explore"
+            enabled: !root.signingIn
+            onClicked: Session.signInWithBrowser("helium")
+        }
+        TextButton {
+            text: qsTr("Chromium")
+            symbol: "travel_explore"
+            enabled: !root.signingIn
+            onClicked: Session.signInWithBrowser("chromium")
+        }
+        TextButton {
+            text: qsTr("Chrome")
+            symbol: "travel_explore"
+            enabled: !root.signingIn
+            onClicked: Session.signInWithBrowser("chrome")
+        }
+        TextButton {
+            text: qsTr("Brave")
+            symbol: "travel_explore"
+            enabled: !root.signingIn
+            onClicked: Session.signInWithBrowser("brave")
+        }
+        TextButton {
+            text: qsTr("Firefox")
+            symbol: "travel_explore"
+            enabled: !root.signingIn
+            onClicked: Session.signInWithBrowser("firefox")
+        }
+    }
+
+    StyledText {
+        width: parent.width
+        text: qsTr("reads the cookie from that browser's profile. close the browser first if it is running. or paste it below.")
+        wrapMode: Text.Wrap
+        font.pixelSize: Appearance.fontSize.smaller
+        color: Appearance.colors.onSurfaceVariant
+    }
+
     Rectangle {
         width: parent.width
         height: 150

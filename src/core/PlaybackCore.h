@@ -47,6 +47,12 @@ public:
     /// connects with a login a connection returned, and returns the one to
     /// keep from then on
     virtual QCoro::Task<QString> connectStoredSession(QString login, QString clientId) = 0;
+    /// signs in by reading the cookie out of a browser's own profile
+    virtual QCoro::Task<QString> connectBrowser(QString /*browser*/)
+    {
+        throw SpotifyError(SpotifyError::Kind::Core,
+                           QStringLiteral("this core cannot read a browser login."));
+    }
     virtual void disconnectSession() = 0;
     /// drops this core for a fresh one, as a logout does. pending calls cancel.
     virtual void reset() = 0;
@@ -82,8 +88,8 @@ public:
     virtual void setStreamQuality(int kbps) = 0;
     virtual void setVolumeNormalization(bool enabled) = 0;
     /// filters sponsored shelves and ad placements from every library answer
-    virtual void setAdBlock(bool /*enabled*/) {}
-    virtual bool adBlock() const { return true; }
+    virtual void setDnsResolver(bool /*enabled*/) {}
+    virtual bool dnsResolver() const { return true; }
     /// keeps streamed songs in `path`, up to `limitBytes`; both apply the
     /// next time playback connects
     virtual void setAudioCache(const QString &path, qint64 limitBytes) = 0;

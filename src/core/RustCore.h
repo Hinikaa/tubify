@@ -43,6 +43,7 @@ public:
 
     QCoro::Task<QString> connectSession(QString accessToken, QString clientId) override;
     QCoro::Task<QString> connectStoredSession(QString login, QString clientId) override;
+    QCoro::Task<QString> connectBrowser(QString browser) override;
     void disconnectSession() override;
     void reset() override;
     quint64 generation() const override { return m_generation; }
@@ -64,8 +65,8 @@ public:
     float volume() const override;
     void setStreamQuality(int kbps) override;
     void setVolumeNormalization(bool enabled) override;
-    void setAdBlock(bool enabled) override;
-    bool adBlock() const override;
+    void setDnsResolver(bool enabled) override;
+    bool dnsResolver() const override;
     void setAudioCache(const QString &path, qint64 limitBytes) override;
     void setPlaybackShaping(float tempo, float pitchSemitones, bool preservesPitch) override;
     void setPreampGain(float gainDb) override;

@@ -217,6 +217,38 @@ QCoro::Task<> SpotifySession::signInAsync(QString cookie)
     emit loginChanged();
 }
 
+void SpotifySession::signInWithBrowser(const QString &browser)
+{
+    detach(signInWithBrowserAsync(browser));
+}
+
+QCoro::Task<> SpotifySession::signInWithBrowserAsync(QString browser)
+{
+    if (m_loginInProgress) {
+        co_return;
+    }
+    m_loginInProgress = true;
+    emit loginChanged();
+    setStatus(QStringLiteral("Reading your browser login…"));
+
+    const quint64 generation = m_generation;
+    try {
+        const QString login = co_await m_core->connectBrowser(browser);
+        throwIfStale(generation);
+        co_await m_credentials->save(CredentialStore::Account::Playback, StoredCredentials {login});
+        emit credentialsSaved();
+        adoptConnected();
+        detach(loadInitialLibrary());
+    } catch (const Cancelled &) {
+    } catch (const SpotifyError &error) {
+        reportError(error.message());
+        adoptDisconnected();
+    }
+
+    m_loginInProgress = false;
+    emit loginChanged();
+}
+
 void SpotifySession::beginPlaybackLogin()
 {
     setStatus(QStringLiteral("Paste your YouTube Music cookie to sign in."));

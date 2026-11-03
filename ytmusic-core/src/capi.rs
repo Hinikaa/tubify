@@ -371,6 +371,12 @@ async_call!(
     }
 );
 async_call!(
+    /// signs in by reading the cookie from a browser's own profile.
+    tubify_core_connect_browser(browser) => |core| {
+        core.connect_browser(browser).await
+    }
+);
+async_call!(
     /// one library call. `op` names the operation and `args` is its json
     /// object; the call completes with the answer as json.
     tubify_core_api_request(op, args) => |core| {
@@ -595,7 +601,7 @@ fallible_call!(tubify_core_seek(position_ms: u32) => |core| core.seek(position_m
 fallible_call!(tubify_core_set_volume(volume: f32) => |core| core.set_volume(volume));
 fallible_call!(tubify_core_set_stream_quality(kbps: u32) => |core| core.set_stream_quality(kbps));
 fallible_call!(tubify_core_set_volume_normalization(enabled: bool) => |core| core.set_volume_normalization(enabled));
-fallible_call!(tubify_core_set_ad_block(enabled: bool) => |core| core.set_ad_block(enabled));
+fallible_call!(tubify_core_set_network_filter(enabled: bool) => |core| core.set_network_filter(enabled));
 /// keeps streamed songs in `path`, up to `limit_bytes`; an empty path keeps
 /// none. applies the next time playback connects. returns null on success, or
 /// an error message to free.
@@ -669,7 +675,7 @@ query!(tubify_core_playback_duration_ms -> u32, 0, |core| core.playback_duration
 query!(tubify_core_take_end_of_track -> bool, false, |core| core.take_end_of_track());
 query!(tubify_core_volume -> f32, 0.75, |core| core.volume());
 query!(tubify_core_output_rate -> u32, 0, |core| core.output_rate());
-query!(tubify_core_ad_block -> bool, true, |core| core.ad_block());
+query!(tubify_core_network_filter -> bool, true, |core| core.network_filter());
 
 /// # Safety
 /// `core` is null or live.

@@ -146,6 +146,27 @@ Flickable {
             }
         }
 
+        StyledText {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("or read it straight from your browser")
+            color: Appearance.colors.onSurfaceVariant
+            font.pixelSize: Appearance.fontSize.smaller
+        }
+
+        Flow {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(460, parent.width)
+            spacing: 8
+
+            TextButton { text: qsTr("Helium"); symbol: "travel_explore"; enabled: !Session.loginInProgress; onClicked: Session.signInWithBrowser("helium") }
+            TextButton { text: qsTr("Chromium"); symbol: "travel_explore"; enabled: !Session.loginInProgress; onClicked: Session.signInWithBrowser("chromium") }
+            TextButton { text: qsTr("Chrome"); symbol: "travel_explore"; enabled: !Session.loginInProgress; onClicked: Session.signInWithBrowser("chrome") }
+            TextButton { text: qsTr("Brave"); symbol: "travel_explore"; enabled: !Session.loginInProgress; onClicked: Session.signInWithBrowser("brave") }
+            TextButton { text: qsTr("Firefox"); symbol: "travel_explore"; enabled: !Session.loginInProgress; onClicked: Session.signInWithBrowser("firefox") }
+        }
+
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(460, parent.width)

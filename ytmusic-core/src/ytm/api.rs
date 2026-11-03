@@ -52,9 +52,9 @@ pub struct Api {
 }
 
 impl Api {
-    pub fn new(auth: Auth, ad_block: bool) -> Result<Self, String> {
+    pub fn new(auth: Auth, network_filter: bool) -> Result<Self, String> {
         let profile = auth.profile();
-        let client = Innertube::new(Some(auth), ad_block)?;
+        let client = Innertube::new(Some(auth), network_filter)?;
         Ok(Self {
             client,
             profile,
@@ -65,8 +65,8 @@ impl Api {
         })
     }
 
-    pub fn set_ad_block(&self, enabled: bool) {
-        self.client.set_ad_block(enabled);
+    pub fn set_network_filter(&self, enabled: bool) {
+        self.client.set_network_filter(enabled);
     }
 
     pub fn auth(&self) -> Option<&Auth> {

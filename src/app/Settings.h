@@ -50,7 +50,7 @@ class Settings : public QObject {
     Q_PROPERTY(double visualizerSensitivity READ visualizerSensitivity WRITE setVisualizerSensitivity NOTIFY visualizerSensitivityChanged FINAL)
     Q_PROPERTY(int streamingQuality READ streamingQuality WRITE setStreamingQuality NOTIFY streamingQualityChanged FINAL)
     Q_PROPERTY(bool normalizeVolume READ normalizeVolume WRITE setNormalizeVolume NOTIFY normalizeVolumeChanged FINAL)
-    Q_PROPERTY(bool adBlock READ adBlock WRITE setAdBlock NOTIFY adBlockChanged FINAL)
+    Q_PROPERTY(bool dnsResolver READ dnsResolver WRITE setDnsResolver NOTIFY dnsResolverChanged FINAL)
     Q_PROPERTY(bool crossfadeEnabled READ crossfadeEnabled WRITE setCrossfadeEnabled NOTIFY crossfadeEnabledChanged FINAL)
     Q_PROPERTY(int crossfadeDurationSeconds READ crossfadeDurationSeconds WRITE setCrossfadeDurationSeconds NOTIFY crossfadeDurationSecondsChanged FINAL)
     /// how much of the songs streamed is kept, so playing one again needs no
@@ -76,9 +76,11 @@ class Settings : public QObject {
     Q_PROPERTY(QString matugenColorsPath READ matugenColorsPath WRITE setMatugenColorsPath NOTIFY matugenColorsPathChanged FINAL)
     Q_PROPERTY(bool showWindowControls READ showWindowControls WRITE setShowWindowControls NOTIFY showWindowControlsChanged FINAL)
     Q_PROPERTY(bool windowControlsOnRight READ windowControlsOnRight WRITE setWindowControlsOnRight NOTIFY windowControlsOnRightChanged FINAL)
-    /// where the stats page reads from: "statsfm" or "local"
+    /// where the stats page reads from: "statsfm", "lastfm" or "local"
     Q_PROPERTY(QString statsSource READ statsSource WRITE setStatsSource NOTIFY statsSourceChanged FINAL)
     Q_PROPERTY(QString statsFmUsername READ statsFmUsername WRITE setStatsFmUsername NOTIFY statsFmUsernameChanged FINAL)
+    Q_PROPERTY(QString lastFmUsername READ lastFmUsername WRITE setLastFmUsername NOTIFY lastFmUsernameChanged FINAL)
+    Q_PROPERTY(QString lastFmApiKey READ lastFmApiKey WRITE setLastFmApiKey NOTIFY lastFmApiKeyChanged FINAL)
     /// whether songs played here are kept for the local stats
     Q_PROPERTY(bool trackListening READ trackListening WRITE setTrackListening NOTIFY trackListeningChanged FINAL)
     Q_PROPERTY(bool nativeTitleBar READ nativeTitleBar WRITE setNativeTitleBar NOTIFY nativeTitleBarChanged FINAL)
@@ -146,8 +148,8 @@ public:
     void setStreamingQuality(int value);
     bool normalizeVolume() const { return m_normalizeVolume; }
     void setNormalizeVolume(bool value);
-    bool adBlock() const { return m_adBlock; }
-    void setAdBlock(bool value);
+    bool dnsResolver() const { return m_dnsResolver; }
+    void setDnsResolver(bool value);
     bool crossfadeEnabled() const { return m_crossfadeEnabled; }
     void setCrossfadeEnabled(bool value);
     int crossfadeDurationSeconds() const { return m_crossfadeDurationSeconds; }
@@ -195,6 +197,10 @@ public:
     void setStatsSource(const QString &value);
     QString statsFmUsername() const { return m_statsFmUsername; }
     void setStatsFmUsername(const QString &value);
+    QString lastFmUsername() const { return m_lastFmUsername; }
+    void setLastFmUsername(const QString &value);
+    QString lastFmApiKey() const { return m_lastFmApiKey; }
+    void setLastFmApiKey(const QString &value);
     bool trackListening() const { return m_trackListening; }
     void setTrackListening(bool value);
     void setWindowControlsOnRight(bool value);
@@ -236,7 +242,7 @@ signals:
     void visualizerSensitivityChanged();
     void streamingQualityChanged();
     void normalizeVolumeChanged();
-    void adBlockChanged();
+    void dnsResolverChanged();
     void crossfadeEnabledChanged();
     void crossfadeDurationSecondsChanged();
     void songCacheMegabytesChanged();
@@ -258,6 +264,8 @@ signals:
     void windowControlsOnRightChanged();
     void statsSourceChanged();
     void statsFmUsernameChanged();
+    void lastFmUsernameChanged();
+    void lastFmApiKeyChanged();
     void trackListeningChanged();
     void nativeTitleBarChanged();
     void trayIconChanged();
@@ -282,9 +290,9 @@ private:
     bool m_roundArtwork = false;
     QString m_visualizerShape = QStringLiteral("bars");
     double m_visualizerSensitivity = 1.0;
-    int m_streamingQuality = 160;
+    int m_streamingQuality = 256;
     bool m_normalizeVolume = false;
-    bool m_adBlock = true;
+    bool m_dnsResolver = true;
     bool m_crossfadeEnabled = false;
     int m_crossfadeDurationSeconds = 5;
     int m_songCacheMegabytes = 1000;
@@ -306,6 +314,8 @@ private:
     bool m_windowControlsOnRight = false;
     QString m_statsSource = QStringLiteral("local");
     QString m_statsFmUsername;
+    QString m_lastFmUsername;
+    QString m_lastFmApiKey;
     bool m_trackListening = true;
 #ifdef Q_OS_WIN
     bool m_nativeTitleBar = false;

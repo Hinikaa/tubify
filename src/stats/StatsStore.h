@@ -21,6 +21,7 @@
 #include "core/Async.h"
 #include "library/SongListModel.h"
 #include "stats/StatsFmClient.h"
+#include "stats/LastFmClient.h"
 #include "stats/StatsListModel.h"
 #include "stats/StatsTypes.h"
 
@@ -45,15 +46,17 @@ class SpotifySession;
 /// the stats page (listening-stats for spicetify, after stats.fm): the top
 /// songs, artists, albums and genres of a period, when the listening
 /// happened, and the plays of the last year on a calendar. read from stats.fm
-/// by username, or worked out from the plays kept on this computer
+/// or Last.fm by username, or worked out from the plays kept on this computer
 class StatsStore : public QObject {
     Q_OBJECT
     QML_NAMED_ELEMENT(Stats)
     QML_SINGLETON
 
-    /// "statsfm" or "local"
+    /// "statsfm", "lastfm" or "local"
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged FINAL)
     Q_PROPERTY(QString username READ username WRITE setUsername NOTIFY sourceChanged FINAL)
+    Q_PROPERTY(QString lastFmUsername READ lastFmUsername WRITE setLastFmUsername NOTIFY sourceChanged FINAL)
+    Q_PROPERTY(QString lastFmApiKey READ lastFmApiKey WRITE setLastFmApiKey NOTIFY sourceChanged FINAL)
     Q_PROPERTY(bool tracking READ tracking WRITE setTracking NOTIFY trackingChanged FINAL)
     /// 0 today, 1 the last four weeks, 2 the last six months, 3 all time
     Q_PROPERTY(int period READ period WRITE setPeriod NOTIFY periodChanged FINAL)
@@ -115,6 +118,10 @@ public:
     void setSource(const QString &source);
     QString username() const;
     void setUsername(const QString &username);
+    QString lastFmUsername() const;
+    void setLastFmUsername(const QString &username);
+    QString lastFmApiKey() const;
+    void setLastFmApiKey(const QString &key);
     bool tracking() const;
     void setTracking(bool tracking);
     int period() const { return int(m_period); }
@@ -179,12 +186,15 @@ signals:
 
 private:
     bool usesStatsFm() const;
+    bool usesLastFm() const;
+    bool usesRemote() const;
     void setLoading(bool loading);
     void setError(const QString &message);
     void apply(const StatsSnapshot &snapshot);
     void reorder();
     void computeLocal();
     QCoro::Task<> loadStatsFm(CancelToken token);
+    QCoro::Task<> loadLastFm(CancelToken token);
     QCoro::Task<> fillGenres(QStringList artistIds, CancelToken token);
     void loadGenreCache();
     void saveGenreCache() const;
@@ -194,6 +204,7 @@ private:
     PlayHistory *m_history;
     PlayTracker *m_tracker;
     StatsFmClient m_statsFm;
+    LastFmClient m_lastFm;
     StatsPeriod m_period = StatsPeriod::Weeks;
     bool m_rankByTime = false;
     bool m_loading = false;

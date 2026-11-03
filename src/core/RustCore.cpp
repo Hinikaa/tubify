@@ -196,6 +196,13 @@ QCoro::Task<QString> RustCore::connectStoredSession(QString login, QString clien
         [&](quint64 id) { tubify_core_connect_stored(m_core, id, stored.constData(), client.constData()); });
 }
 
+QCoro::Task<QString> RustCore::connectBrowser(QString browser)
+{
+    const QByteArray name = browser.toUtf8();
+    co_return co_await request(
+        [&](quint64 id) { tubify_core_connect_browser(m_core, id, name.constData()); });
+}
+
 void RustCore::disconnectSession()
 {
     tubify_core_disconnect(m_core);
@@ -275,14 +282,14 @@ void RustCore::setVolumeNormalization(bool enabled)
     throwIfError(tubify_core_set_volume_normalization(m_core, enabled));
 }
 
-void RustCore::setAdBlock(bool enabled)
+void RustCore::setDnsResolver(bool enabled)
 {
-    throwIfError(tubify_core_set_ad_block(m_core, enabled));
+    throwIfError(tubify_core_set_network_filter(m_core, enabled));
 }
 
-bool RustCore::adBlock() const
+bool RustCore::dnsResolver() const
 {
-    return tubify_core_ad_block(m_core);
+    return tubify_core_network_filter(m_core);
 }
 
 void RustCore::setAudioCache(const QString &path, qint64 limitBytes)

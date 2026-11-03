@@ -27,10 +27,12 @@ What changed is underneath:
   from YouTube Music's own API
 - songs are fetched with `yt-dlp` into a local cache and played from disk
   through the same equalizer, analyser and output local files use
-- **ad blocking** in Settings: hides sponsored shelves and ad placements in
-  every YouTube Music answer. Songs themselves are always fetched ad-free.
+- **DNS resolver** in Settings: filters sponsored shelves and promoted placements
+  from every YouTube Music answer. Songs themselves are always fetched cleanly.
 
 the UI is not a webview: it is Qt Quick, and the core is Rust.
+
+Tubify is unofficial and is not affiliated with YouTube or Google.
 
 ## requirements
 
@@ -89,8 +91,9 @@ readable only by its owner. Nothing is sent anywhere except to YouTube Music.
 - equalizer, tempo/pitch, preamp and volume normalization
 - visualizers and the living backdrop
 - local files with tag editing and local playlists
-- listening stats, Discord rich presence and MPRIS
-- ad blocking in Settings
+- listening stats from stats.fm, Last.fm, or the plays kept on this computer
+- Discord rich presence and MPRIS
+- DNS resolver in Settings
 
 ## notes
 
@@ -100,6 +103,8 @@ readable only by its owner. Nothing is sent anywhere except to YouTube Music.
   the artist without a genre instead of guessing.
 - playback needs `yt-dlp` and `ffmpeg`; without them the app still browses the
   library but cannot fetch a song.
+- Last.fm stats need a free API key from last.fm/api/account/create. The key and
+  username stay on this computer.
 
 ## credits
 

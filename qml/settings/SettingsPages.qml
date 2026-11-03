@@ -30,7 +30,7 @@ Item {
 
     property int page: 0
     readonly property list<string> fades: ["none", "finalSeconds", "entire"]
-    readonly property list<int> qualities: [96, 160, 320]
+    readonly property list<int> qualities: [128, 256, 0]
     readonly property list<int> cacheSizes: [500, 1000, 2000]
 
     component Page: Column {
@@ -256,9 +256,9 @@ Item {
                     text: qsTr("Streaming")
                     currentIndex: Math.max(0, root.qualities.indexOf(Settings.streamingQuality))
                     segments: [
-                        Segment { text: qsTr("96 kbps") },
-                        Segment { text: qsTr("160 kbps") },
-                        Segment { text: qsTr("320 kbps") }
+                        Segment { text: qsTr("Normal (128 kbps)") },
+                        Segment { text: qsTr("High (256 kbps)") },
+                        Segment { text: qsTr("Best available") }
                     ]
                     onActivated: (index) => Settings.streamingQuality = root.qualities[index]
                 }
@@ -278,12 +278,12 @@ Item {
                     onToggledTo: (checked) => Settings.normalizeVolume = checked
                 }
                 ConfigSwitch {
-                    text: qsTr("Block ads")
-                    checked: Settings.adBlock
-                    onToggledTo: (checked) => Settings.adBlock = checked
+                    text: qsTr("DNS Resolver")
+                    checked: Settings.dnsResolver
+                    onToggledTo: (checked) => Settings.dnsResolver = checked
                 }
                 NoteText {
-                    text: qsTr("blocking ads hides sponsored shelves and ad placements in YouTube Music answers. songs are always fetched ad-free.")
+                    text: qsTr("filters sponsored shelves and promoted placements from YouTube Music answers. songs are always fetched cleanly.")
                 }
             }
         }
@@ -772,15 +772,17 @@ Item {
 
                 ConfigSelection {
                     text: qsTr("Stats from")
-                    currentIndex: Stats.source === "statsfm" ? 0 : 1
+                    currentIndex: Stats.source === "statsfm" ? 0 : Stats.source === "lastfm" ? 1 : 2
                     segments: [
                         Segment { text: "stats.fm" },
+                        Segment { text: "Last.fm" },
                         Segment { text: qsTr("This computer") }
                     ]
-                    onActivated: (index) => Stats.source = index === 0 ? "statsfm" : "local"
+                    onActivated: (index) => Stats.source = index === 0 ? "statsfm" : index === 1 ? "lastfm" : "local"
                 }
                 OutlinedTextField {
                     id: statsFmUsername
+                    visible: Stats.source === "statsfm"
                     x: 8
                     width: Math.min(460, parent.width - 16)
                     placeholder: qsTr("stats.fm username")
@@ -794,6 +796,36 @@ Item {
                             if (!statsFmUsername.inputItem.activeFocus) {
                                 Stats.username = statsFmUsername.text
                             }
+                        }
+                    }
+                }
+                OutlinedTextField {
+                    id: lastFmUsername
+                    visible: Stats.source === "lastfm"
+                    x: 8
+                    width: Math.min(460, parent.width - 16)
+                    placeholder: qsTr("Last.fm username")
+                    text: Stats.lastFmUsername
+                    onAccepted: Stats.lastFmUsername = text
+                    Connections {
+                        target: lastFmUsername.inputItem
+                        function onActiveFocusChanged() {
+                            if (!lastFmUsername.inputItem.activeFocus) Stats.lastFmUsername = lastFmUsername.text
+                        }
+                    }
+                }
+                OutlinedTextField {
+                    id: lastFmApiKey
+                    visible: Stats.source === "lastfm"
+                    x: 8
+                    width: Math.min(460, parent.width - 16)
+                    placeholder: qsTr("Last.fm API key")
+                    text: Stats.lastFmApiKey
+                    onAccepted: Stats.lastFmApiKey = text
+                    Connections {
+                        target: lastFmApiKey.inputItem
+                        function onActiveFocusChanged() {
+                            if (!lastFmApiKey.inputItem.activeFocus) Stats.lastFmApiKey = lastFmApiKey.text
                         }
                     }
                 }
@@ -820,7 +852,11 @@ Item {
                     }
                 }
                 NoteText {
-                    text: qsTr("stats.fm only needs a public username. songs count here after 30 seconds (%1 so far) and are local only").arg(Stats.historyCount)
+                    text: Stats.source === "lastfm"
+                          ? qsTr("Last.fm needs your username and a free API key from last.fm/api/account/create. It reads the scrobbles already on your profile.")
+                          : Stats.source === "statsfm"
+                            ? qsTr("stats.fm only needs a public username. songs count here after 30 seconds (%1 so far) and are local only").arg(Stats.historyCount)
+                            : qsTr("songs count here after 30 seconds (%1 so far) and are local only").arg(Stats.historyCount)
                 }
             }
         }
@@ -925,9 +961,20 @@ Item {
                             }
                         }
                         StyledText {
-                            text: qsTr("developed by addenator, the best programmer on earth")
+                            text: qsTr("a fork of Swiftify by shred0s, maintained by Hinika")
                             font.pixelSize: Appearance.fontSize.smaller
                             color: Appearance.colors.onSurfaceVariant
+                        }
+                        StyledText {
+                            text: qsTr("Unofficial client. Not affiliated with YouTube or Google.")
+                            font.pixelSize: Appearance.fontSize.smaller
+                            color: Appearance.colors.onSurfaceVariant
+                        }
+                        TextButton {
+                            variant: TextButton.Text
+                            symbol: "open_in_new"
+                            text: qsTr("Original Swiftify project")
+                            onClicked: App.openUrl("https://github.com/swiftify-org/swiftify")
                         }
                         StyledText {
                             topPadding: 8

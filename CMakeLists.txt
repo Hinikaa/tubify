@@ -19,7 +19,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Tubify
-    VERSION 0.25.1
+    VERSION 0.1.0
     DESCRIPTION "A native YouTube Music client"
     LANGUAGES C CXX)
 

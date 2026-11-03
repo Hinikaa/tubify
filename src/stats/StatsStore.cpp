@@ -77,6 +77,7 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
     , m_history(history)
     , m_tracker(tracker)
     , m_statsFm(network)
+    , m_lastFm(network)
     , m_topTracks(new StatsListModel(this))
     , m_topArtists(new StatsListModel(this))
     , m_topAlbums(new StatsListModel(this))
@@ -93,7 +94,7 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
     m_localRefresh.setSingleShot(true);
     m_localRefresh.setInterval(800);
     connect(&m_localRefresh, &QTimer::timeout, this, [this] {
-        if (!usesStatsFm()) {
+        if (!usesRemote()) {
             computeLocal();
         }
     });
@@ -117,6 +118,14 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
             emit sourceChanged();
             if (usesStatsFm()) refresh();
         });
+        connect(m_settings, &Settings::lastFmUsernameChanged, this, [this] {
+            emit sourceChanged();
+            if (usesLastFm()) refresh();
+        });
+        connect(m_settings, &Settings::lastFmApiKeyChanged, this, [this] {
+            emit sourceChanged();
+            if (usesLastFm()) refresh();
+        });
         connect(m_settings, &Settings::trackListeningChanged, this, [this] {
             if (m_tracker) m_tracker->setEnabled(m_settings->trackListening());
             emit trackingChanged();
@@ -128,7 +137,7 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
     if (m_session) {
         // the genres of the local stats come through the library login
         connect(m_session, &SpotifySession::libraryConnectedChanged, this, [this] {
-            if (!usesStatsFm() && m_session->isLibraryConnected()) {
+            if (!usesRemote() && m_session->isLibraryConnected()) {
                 m_genresAsked.clear();
                 computeLocal();
             }
@@ -177,6 +186,26 @@ void StatsStore::setUsername(const QString &username)
     if (m_settings) m_settings->setStatsFmUsername(StatsFmClient::normalizeUsername(username));
 }
 
+QString StatsStore::lastFmUsername() const
+{
+    return m_settings ? m_settings->lastFmUsername() : QString();
+}
+
+void StatsStore::setLastFmUsername(const QString &username)
+{
+    if (m_settings) m_settings->setLastFmUsername(LastFmClient::normalizeUsername(username));
+}
+
+QString StatsStore::lastFmApiKey() const
+{
+    return m_settings ? m_settings->lastFmApiKey() : QString();
+}
+
+void StatsStore::setLastFmApiKey(const QString &key)
+{
+    if (m_settings) m_settings->setLastFmApiKey(key);
+}
+
 bool StatsStore::tracking() const
 {
     return m_settings ? m_settings->trackListening() : true;
@@ -211,6 +240,16 @@ void StatsStore::setRankByTime(bool byTime)
 bool StatsStore::usesStatsFm() const
 {
     return source() == kStatsFm;
+}
+
+bool StatsStore::usesLastFm() const
+{
+    return source() == QStringLiteral("lastfm");
+}
+
+bool StatsStore::usesRemote() const
+{
+    return usesStatsFm() || usesLastFm();
 }
 
 int StatsStore::historyCount() const
@@ -265,6 +304,14 @@ void StatsStore::refresh()
             return;
         }
         detach(loadStatsFm(m_load.renew()));
+    } else if (usesLastFm()) {
+        if (lastFmUsername().isEmpty() || lastFmApiKey().isEmpty()) {
+            setError({});
+            setLoading(false);
+            apply({});
+            return;
+        }
+        detach(loadLastFm(m_load.renew()));
     } else {
         setError({});
         setLoading(false);
@@ -318,7 +365,7 @@ QCoro::Task<> StatsStore::fillGenres(QStringList artistIds, CancelToken token)
         }
         saveGenreCache();
         m_genreLoad.finish(token);
-        if (!usesStatsFm()) {
+        if (!usesRemote()) {
             computeLocal();
         }
     } catch (const Cancelled &) {
@@ -335,14 +382,52 @@ QCoro::Task<> StatsStore::loadStatsFm(CancelToken token)
     setLoading(true);
     setError({});
     try {
-        if (m_profileFor != name) {
+        const QString profileKey = QStringLiteral("statsfm:") + name;
+        if (m_profileFor != profileKey) {
             const StatsFmProfile profile = co_await m_statsFm.profile(name);
             throwIfCancelled(token);
             m_profile = profile;
-            m_profileFor = name;
+            m_profileFor = profileKey;
             emit profileChanged();
         }
         const StatsSnapshot snapshot = co_await m_statsFm.snapshot(name, m_period, m_profile.isPlus);
+        throwIfCancelled(token);
+        apply(snapshot);
+        setLoading(false);
+        m_load.finish(token);
+    } catch (const Cancelled &) {
+    } catch (const StatsFmError &error) {
+        if (isCancelled(token)) {
+            co_return;
+        }
+        if (error.kind() == StatsFmError::Kind::NotFound) {
+            m_profile = {};
+            m_profileFor.clear();
+            emit profileChanged();
+        }
+        apply({});
+        setError(error.message());
+        setLoading(false);
+        m_load.finish(token);
+    }
+}
+
+QCoro::Task<> StatsStore::loadLastFm(CancelToken token)
+{
+    const QString name = lastFmUsername();
+    const QString key = lastFmApiKey();
+    setLoading(true);
+    setError({});
+    try {
+        const QString profileKey = QStringLiteral("lastfm:") + name;
+        if (m_profileFor != profileKey) {
+            const StatsFmProfile profile = co_await m_lastFm.profile(name, key);
+            throwIfCancelled(token);
+            m_profile = profile;
+            m_profileFor = profileKey;
+            emit profileChanged();
+        }
+        const StatsSnapshot snapshot = co_await m_lastFm.snapshot(name, m_period, key);
         throwIfCancelled(token);
         apply(snapshot);
         setLoading(false);

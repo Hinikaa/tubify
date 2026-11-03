@@ -90,6 +90,8 @@ public:
     /// signs in with the Cookie header copied from a signed-in
     /// music.youtube.com. the whole flow is one request to check it.
     Q_INVOKABLE void signIn(const QString &cookie);
+    /// reads the cookie out of a browser's own profile
+    Q_INVOKABLE void signInWithBrowser(const QString &browser);
     /// the views' old buttons: they now just ask for the cookie.
     Q_INVOKABLE void beginPlaybackLogin();
     Q_INVOKABLE void beginLibraryLogin();
@@ -147,6 +149,7 @@ signals:
 private:
     QCoro::Task<> restore();
     QCoro::Task<> signInAsync(QString cookie);
+    QCoro::Task<> signInWithBrowserAsync(QString browser);
     QCoro::Task<> reconnect();
     QCoro::Task<> loadInitialLibrary();
     void adoptConnected();

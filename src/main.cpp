@@ -318,14 +318,14 @@ int main(int argc, char *argv[])
     const auto applyStreaming = [&] {
         core.setStreamQuality(settings.streamingQuality());
         core.setVolumeNormalization(settings.normalizeVolume());
-        core.setAdBlock(settings.adBlock());
+        core.setDnsResolver(settings.dnsResolver());
         core.setAudioCache(paths::cacheDirectory() + QStringLiteral("/songs"),
                            qint64(settings.songCacheMegabytes()) * 1000 * 1000);
     };
     applyStreaming();
     QObject::connect(&settings, &Settings::streamingQualityChanged, &core, applyStreaming);
     QObject::connect(&settings, &Settings::normalizeVolumeChanged, &core, applyStreaming);
-    QObject::connect(&settings, &Settings::adBlockChanged, &core, applyStreaming);
+    QObject::connect(&settings, &Settings::dnsResolverChanged, &core, applyStreaming);
     QObject::connect(&settings, &Settings::songCacheMegabytesChanged, &core, applyStreaming);
     FileCredentialStore credentials;
     SpotifySession session(&core, &credentials, &errors);

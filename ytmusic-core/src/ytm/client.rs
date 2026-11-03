@@ -26,11 +26,11 @@ pub struct Innertube {
     auth: Option<Auth>,
     /// drops sponsored shelves and every ad placement before anything reads
     /// the answer
-    ad_block: Arc<AtomicBool>,
+    network_filter: Arc<AtomicBool>,
 }
 
 impl Innertube {
-    pub fn new(auth: Option<Auth>, ad_block: bool) -> Result<Self, String> {
+    pub fn new(auth: Option<Auth>, network_filter: bool) -> Result<Self, String> {
         let http = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(40))
             .user_agent(USER_AGENT_VALUE)
@@ -39,7 +39,7 @@ impl Innertube {
         Ok(Self {
             http,
             auth,
-            ad_block: Arc::new(AtomicBool::new(ad_block)),
+            network_filter: Arc::new(AtomicBool::new(network_filter)),
         })
     }
 
@@ -51,12 +51,12 @@ impl Innertube {
         self.auth = auth;
     }
 
-    pub fn set_ad_block(&self, enabled: bool) {
-        self.ad_block.store(enabled, Ordering::Relaxed);
+    pub fn set_network_filter(&self, enabled: bool) {
+        self.network_filter.store(enabled, Ordering::Relaxed);
     }
 
-    pub fn ad_block(&self) -> bool {
-        self.ad_block.load(Ordering::Relaxed)
+    pub fn network_filter(&self) -> bool {
+        self.network_filter.load(Ordering::Relaxed)
     }
 
     pub async fn send(&self, endpoint: &str, body: Value) -> Result<Value, String> {
@@ -120,8 +120,8 @@ impl Innertube {
                 .unwrap_or("the request was refused");
             return Err(format!("YouTube Music: {message}"));
         }
-        if self.ad_block() {
-            scrub_ads(&mut root);
+        if self.network_filter() {
+            scrub_sponsored(&mut root);
         }
         Ok(root)
     }
@@ -179,10 +179,10 @@ fn context() -> Value {
     })
 }
 
-/// removes what an ad blocker would: promoted shelves, ad slots, and the
+/// removes what a filtered resolver would: promoted shelves, ad slots, and the
 /// player's ad breaks. only the client's own answers are touched; the audio
 /// itself is fetched through yt-dlp, which never puts an ad in it.
-pub fn scrub_ads(value: &mut Value) {
+pub fn scrub_sponsored(value: &mut Value) {
     match value {
         Value::Object(map) => {
             map.retain(|key, _| {
@@ -198,7 +198,7 @@ pub fn scrub_ads(value: &mut Value) {
                     && !key.contains("AdSlot")
             });
             for child in map.values_mut() {
-                scrub_ads(child);
+                scrub_sponsored(child);
             }
         }
         Value::Array(items) => {
@@ -212,7 +212,7 @@ pub fn scrub_ads(value: &mut Value) {
                 }
             });
             for child in items.iter_mut() {
-                scrub_ads(child);
+                scrub_sponsored(child);
             }
         }
         _ => {}
@@ -224,7 +224,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn an_ad_blocked_answer_keeps_the_shelves() {
+    fn an_network_filtered_answer_keeps_the_shelves() {
         let mut value = json!({
             "contents": {
                 "shelf": { "title": "Listen again", "items": [{"musicResponsiveListItemRenderer": {}}] },
@@ -233,7 +233,7 @@ mod tests {
             },
             "playerAds": [{ "playerLegacyDesktopWatchAdsRenderer": {} }]
         });
-        scrub_ads(&mut value);
+        scrub_sponsored(&mut value);
         assert!(value["contents"]["shelf"]["items"].is_array());
         assert!(value["contents"].get("adSlots").is_none());
         assert!(

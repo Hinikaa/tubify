@@ -43,7 +43,7 @@ QString oneOf(const QString &value, std::initializer_list<QString> allowed, cons
 
 int quality(int kbps, int fallback)
 {
-    return kbps == 96 || kbps == 160 || kbps == 320 ? kbps : fallback;
+    return kbps == 128 || kbps == 256 || kbps == 0 ? kbps : fallback;
 }
 
 template <typename T>
@@ -140,12 +140,12 @@ void Settings::load()
     }
     {
         const int raw = stored<int>(m_store, "streamingQuality", m_streamingQuality);
-        m_streamingQuality = quality(raw, 160);
+        m_streamingQuality = quality(raw, 256);
         const int cache = stored<int>(m_store, "songCacheMegabytes", m_songCacheMegabytes);
         m_songCacheMegabytes = cache == 500 || cache == 2000 ? cache : 1000;
     }
     m_normalizeVolume = stored<bool>(m_store, "normalizeVolume", m_normalizeVolume);
-    m_adBlock = stored<bool>(m_store, "adBlock", m_adBlock);
+    m_dnsResolver = stored<bool>(m_store, "dnsResolver", m_dnsResolver);
     m_crossfadeEnabled = stored<bool>(m_store, "crossfadeEnabled", m_crossfadeEnabled);
     m_crossfadeDurationSeconds = std::clamp(
         stored<int>(m_store, "crossfadeDurationSeconds", m_crossfadeDurationSeconds), 1, 12);
@@ -195,6 +195,8 @@ void Settings::load()
         m_statsSource = source;
     }
     m_statsFmUsername = stored<QString>(m_store, "statsFmUsername", m_statsFmUsername).trimmed();
+    m_lastFmUsername = stored<QString>(m_store, "lastFmUsername", m_lastFmUsername).trimmed();
+    m_lastFmApiKey = stored<QString>(m_store, "lastFmApiKey", m_lastFmApiKey).trimmed();
     m_trackListening = stored<bool>(m_store, "trackListening", m_trackListening);
     m_nativeTitleBar = stored<bool>(m_store, "nativeTitleBar", m_nativeTitleBar);
     m_trayIcon = stored<bool>(m_store, "trayIcon", m_trayIcon);
@@ -316,7 +318,7 @@ void Settings::setVisualizerSensitivity(double raw)
 
 void Settings::setStreamingQuality(int raw)
 {
-    const int value = quality(raw, 160);
+    const int value = quality(raw, 256);
     if (m_streamingQuality == value) {
         return;
     }
@@ -335,14 +337,14 @@ void Settings::setNormalizeVolume(bool value)
     emit normalizeVolumeChanged();
 }
 
-void Settings::setAdBlock(bool value)
+void Settings::setDnsResolver(bool value)
 {
-    if (m_adBlock == value) {
+    if (m_dnsResolver == value) {
         return;
     }
-    m_adBlock = value;
-    m_store.setValue(QStringLiteral("adBlock"), value);
-    emit adBlockChanged();
+    m_dnsResolver = value;
+    m_store.setValue(QStringLiteral("dnsResolver"), value);
+    emit dnsResolverChanged();
 }
 
 void Settings::setSongCacheMegabytes(int megabytes)
@@ -546,7 +548,7 @@ void Settings::setWindowControlsOnRight(bool value)
 
 void Settings::setStatsSource(const QString &value)
 {
-    if (m_statsSource == value || (value != QLatin1StringView("statsfm") && value != QLatin1StringView("local"))) {
+    if (m_statsSource == value || (value != QLatin1StringView("statsfm") && value != QLatin1StringView("lastfm") && value != QLatin1StringView("local"))) {
         return;
     }
     m_statsSource = value;
@@ -563,6 +565,28 @@ void Settings::setStatsFmUsername(const QString &value)
     m_statsFmUsername = trimmed;
     m_store.setValue(QStringLiteral("statsFmUsername"), trimmed);
     emit statsFmUsernameChanged();
+}
+
+void Settings::setLastFmUsername(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    if (m_lastFmUsername == trimmed) {
+        return;
+    }
+    m_lastFmUsername = trimmed;
+    m_store.setValue(QStringLiteral("lastFmUsername"), trimmed);
+    emit lastFmUsernameChanged();
+}
+
+void Settings::setLastFmApiKey(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    if (m_lastFmApiKey == trimmed) {
+        return;
+    }
+    m_lastFmApiKey = trimmed;
+    m_store.setValue(QStringLiteral("lastFmApiKey"), trimmed);
+    emit lastFmApiKeyChanged();
 }
 
 void Settings::setTrackListening(bool value)

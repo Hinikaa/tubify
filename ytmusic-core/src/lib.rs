@@ -152,7 +152,7 @@ struct State {
     stream_quality_kbps: u32,
     volume_normalization: bool,
     audio_cache: Option<(String, u64)>,
-    ad_block: bool,
+    network_filter: bool,
     local_playback: Option<file_playback::LocalPlayback>,
     local_sink: Option<Arc<output::LocalOutput>>,
     live: Option<(Arc<live_input::LiveBuffer>, Arc<AtomicBool>)>,
@@ -167,7 +167,7 @@ impl Default for State {
             stream_quality_kbps: 0,
             volume_normalization: false,
             audio_cache: None,
-            ad_block: true,
+            network_filter: true,
             local_playback: None,
             local_sink: None,
             live: None,
@@ -245,8 +245,8 @@ impl YtMusicCore {
     }
 
     async fn adopt(&self, auth: Auth) -> Result<String, String> {
-        let ad_block = self.lock_state()?.ad_block;
-        let api = Api::new(auth.clone(), ad_block)?;
+        let network_filter = self.lock_state()?.network_filter;
+        let api = Api::new(auth.clone(), network_filter)?;
         let login = auth.to_json();
         {
             let mut state = self.lock_state()?;
@@ -255,6 +255,13 @@ impl YtMusicCore {
         }
         self.output_health.clear();
         Ok(login)
+    }
+
+    /// signs in by reading a browser's own cookie store, so nothing has to be
+    /// copied by hand. the core then keeps the login like any other.
+    pub async fn connect_browser(&self, browser: String) -> Result<String, String> {
+        let auth = ytm::auth::import_browser(&browser).await?;
+        self.adopt(auth).await
     }
 
     pub fn disconnect(&self) {
@@ -331,20 +338,20 @@ impl YtMusicCore {
         Ok(())
     }
 
-    pub fn set_ad_block(&self, enabled: bool) -> Result<(), String> {
+    pub fn set_network_filter(&self, enabled: bool) -> Result<(), String> {
         let api = {
             let mut state = self.lock_state()?;
-            state.ad_block = enabled;
+            state.network_filter = enabled;
             state.api.clone()
         };
         if let Some(api) = api {
-            api.set_ad_block(enabled);
+            api.set_network_filter(enabled);
         }
         Ok(())
     }
 
-    pub fn ad_block(&self) -> bool {
-        self.lock_state().map(|state| state.ad_block).unwrap_or(true)
+    pub fn network_filter(&self) -> bool {
+        self.lock_state().map(|state| state.network_filter).unwrap_or(true)
     }
 
     pub fn audio_output_stalled(&self) -> bool {

@@ -72,6 +72,11 @@ void tubify_core_connect(const TubifyCore *core, uint64_t request_id, const char
  * the login to keep from then on. */
 void tubify_core_connect_stored(const TubifyCore *core, uint64_t request_id, const char *login,
                                 const char *client_id);
+/* signs in by reading the cookie out of a browser's own profile. `browser` is
+ * firefox, chrome, chromium, brave or helium. completes with the login. */
+void tubify_core_connect_browser(const TubifyCore *core, uint64_t request_id,
+                                 const char *browser);
+
 /* one library operation. `op` names it (profile, playlists, playlistSongs,
  * savedSongs, recentlyPlayed, search, song, album, albumSongs, artist,
  * artistAlbums, artistTopTracks, setSaved, createPlaylist, ...) and `args` is
@@ -118,7 +123,7 @@ char *tubify_core_set_volume(const TubifyCore *core, float volume);
 char *tubify_core_set_stream_quality(const TubifyCore *core, uint32_t kbps);
 char *tubify_core_set_volume_normalization(const TubifyCore *core, bool enabled);
 /* filters sponsored shelves and ad placements from every library answer */
-char *tubify_core_set_ad_block(const TubifyCore *core, bool enabled);
+char *tubify_core_set_network_filter(const TubifyCore *core, bool enabled);
 /* keeps fetched songs in path (empty: none), up to limit_bytes */
 char *tubify_core_set_audio_cache(const TubifyCore *core, const char *path, uint64_t limit_bytes);
 char *tubify_core_set_playback_shaping(const TubifyCore *core, float tempo,
@@ -132,7 +137,7 @@ uint32_t tubify_core_playback_position_ms(const TubifyCore *core);
 uint32_t tubify_core_playback_duration_ms(const TubifyCore *core);
 bool tubify_core_take_end_of_track(const TubifyCore *core);
 float tubify_core_volume(const TubifyCore *core);
-bool tubify_core_ad_block(const TubifyCore *core);
+bool tubify_core_network_filter(const TubifyCore *core);
 /* the rate the output for files and live audio runs at (opening it); 0 if none */
 uint32_t tubify_core_output_rate(const TubifyCore *core);
 

@@ -39,9 +39,9 @@ const MIN_CACHED_BYTES: u64 = 100_000;
 /// the format selector for a stream quality, in kbps. zero is "best".
 fn format(quality_kbps: u32) -> String {
     match quality_kbps {
-        0 | 256.. => "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio".to_owned(),
+        0 => "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio".to_owned(),
         1..=128 => "bestaudio[abr<=128][ext=m4a]/bestaudio[abr<=128]/bestaudio".to_owned(),
-        _ => "bestaudio[abr<=192][ext=m4a]/bestaudio[abr<=192]/bestaudio".to_owned(),
+        _ => "bestaudio[abr<=256][ext=m4a]/bestaudio[abr<=256]/bestaudio".to_owned(),
     }
 }
 
@@ -67,7 +67,7 @@ pub fn cached_file(directory: &Path, video_id: &str) -> Option<PathBuf> {
 /// returns the file.
 ///
 /// an anonymous request is tried first: it is the one that always works and
-/// the one an ad blocker would make. if youtube refuses it, the account's
+/// the one a filtered resolver would make. if youtube refuses it, the account's
 /// cookie is offered as a second attempt, which is what gets past a sign-in
 /// wall or a premium-only song.
 pub async fn download(

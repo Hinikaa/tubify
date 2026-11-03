@@ -24,7 +24,7 @@ import Tubify
 // what the person has been listening to (listening-stats for spicetify):
 // the figures of a period, the top songs, artists, albums and genres, when
 // in the day and the week the listening happens, and a year of it on a
-// calendar. from stats.fm, or from the plays kept on this computer
+// calendar. from stats.fm, Last.fm, or from the plays kept on this computer
 Flickable {
     id: root
 
@@ -33,7 +33,10 @@ Flickable {
     readonly property real margin: Appearance.sizes.pageMargin
     readonly property real innerWidth: width - 2 * margin
     readonly property bool usesStatsFm: Stats.source === "statsfm"
+    readonly property bool usesLastFm: Stats.source === "lastfm"
+    readonly property bool usesRemote: usesStatsFm || usesLastFm
     readonly property bool needsUsername: usesStatsFm && Stats.username.length === 0
+    readonly property bool needsLastFm: usesLastFm && (Stats.lastFmUsername.length === 0 || Stats.lastFmApiKey.length === 0)
     readonly property bool wide: innerWidth >= 860
     property bool allTracks: false
     readonly property list<string> periodNames: [qsTr("today"), qsTr("the last 4 weeks"), qsTr("the last 6 months"), qsTr("all time")]
@@ -189,8 +192,8 @@ Flickable {
                     anchors.verticalCenter: parent.verticalCenter
                     size: 30
                     iconSize: 17
-                    shape: root.usesStatsFm ? "softBurst" : "clamShell"
-                    symbol: root.usesStatsFm ? "query_stats" : "computer"
+                    shape: root.usesStatsFm ? "softBurst" : root.usesLastFm ? "clover4" : "clamShell"
+                    symbol: root.usesStatsFm ? "query_stats" : root.usesLastFm ? "music_note" : "computer"
                     color: Appearance.colors.tertiaryContainer
                     iconColor: Appearance.colors.onTertiaryContainer
                 }
@@ -199,8 +202,10 @@ Flickable {
                     text: root.usesStatsFm
                           ? (Stats.profileName.length > 0 ? qsTr("%1 on stats.fm").arg(Stats.profileName) : qsTr("From stats.fm"))
                             + (Stats.isPlus ? " · Plus" : "")
-                          : qsTr("Played in Tubify") + " · " + (Stats.historyCount === 1 ? qsTr("%n play", "", Stats.historyCount) : qsTr("%n plays", "", Stats.historyCount))
-                            + (Stats.tracking ? "" : " · " + qsTr("tracking paused"))
+                          : root.usesLastFm
+                            ? (Stats.profileName.length > 0 ? qsTr("%1 on Last.fm").arg(Stats.profileName) : qsTr("From Last.fm"))
+                            : qsTr("Played in Tubify") + " · " + (Stats.historyCount === 1 ? qsTr("%n play", "", Stats.historyCount) : qsTr("%n plays", "", Stats.historyCount))
+                              + (Stats.tracking ? "" : " · " + qsTr("tracking paused"))
                     color: Appearance.colors.onSurfaceVariant
                 }
             }
@@ -212,12 +217,13 @@ Flickable {
             spacing: 12
 
             SegmentedControl {
-                currentIndex: root.usesStatsFm ? 0 : 1
+                currentIndex: root.usesStatsFm ? 0 : root.usesLastFm ? 1 : 2
                 segments: [
                     Segment { text: "stats.fm"; symbol: "query_stats" },
+                    Segment { text: "Last.fm"; symbol: "music_note" },
                     Segment { text: qsTr("This computer"); symbol: "computer" }
                 ]
-                onActivated: (index) => Stats.source = index === 0 ? "statsfm" : "local"
+                onActivated: (index) => Stats.source = index === 0 ? "statsfm" : index === 1 ? "lastfm" : "local"
             }
             SegmentedControl {
                 currentIndex: Stats.period
@@ -240,11 +246,11 @@ Flickable {
             IconButton {
                 symbol: "refresh"
                 tooltip: qsTr("Refresh")
-                enabled: !Stats.loading && !root.needsUsername
+                enabled: !Stats.loading && !root.needsUsername && !root.needsLastFm
                 onClicked: Stats.refresh()
             }
             IconButton {
-                visible: !root.usesStatsFm && Stats.historyCount > 0
+                visible: !root.usesRemote && Stats.historyCount > 0
                 symbol: "download"
                 tooltip: qsTr("Export listening history as CSV")
                 onClicked: {
@@ -313,6 +319,62 @@ Flickable {
             }
         }
 
+        // --- connecting Last.fm ----------------------------------------------------------
+        Card {
+            x: root.margin
+            width: Math.min(root.innerWidth, 640)
+            visible: root.usesLastFm && (root.needsLastFm || Stats.errorMessage.length > 0)
+            title: root.needsLastFm ? qsTr("Connect Last.fm") : "Last.fm"
+            symbol: "link"
+            iconShape: "clover4"
+
+            StyledText {
+                width: parent.width
+                visible: Stats.errorMessage.length > 0
+                text: Stats.errorMessage
+                wrapMode: Text.Wrap
+                color: Appearance.colors.error
+            }
+            StyledText {
+                width: parent.width
+                text: qsTr("Type your Last.fm username and paste your own API key. Create one for free at last.fm/api/account/create.")
+                wrapMode: Text.Wrap
+                color: Appearance.colors.onSurfaceVariant
+            }
+            OutlinedTextField {
+                id: lastFmUser
+                width: parent.width
+                placeholder: qsTr("Last.fm username")
+                text: Stats.lastFmUsername
+                onAccepted: Stats.lastFmUsername = text
+            }
+            OutlinedTextField {
+                id: lastFmKey
+                width: parent.width
+                placeholder: qsTr("Last.fm API key")
+                text: Stats.lastFmApiKey
+                onAccepted: Stats.lastFmApiKey = text
+            }
+            TextButton {
+                variant: TextButton.Tonal
+                symbol: "query_stats"
+                text: qsTr("Show Stats")
+                enabled: lastFmUser.text.trim().length > 0 && lastFmKey.text.trim().length > 0
+                onClicked: {
+                    Stats.lastFmUsername = lastFmUser.text
+                    Stats.lastFmApiKey = lastFmKey.text
+                    Stats.refresh()
+                }
+            }
+            StyledText {
+                width: parent.width
+                text: qsTr("Last.fm sees what you scrobble. If Tubify plays are not scrobbled, the plays kept on this computer still count.")
+                wrapMode: Text.Wrap
+                font.pixelSize: Appearance.fontSize.smaller
+                color: Appearance.colors.outline
+            }
+        }
+
         Item {
             width: root.width
             height: 200
@@ -332,12 +394,16 @@ Flickable {
         EmptyState {
             x: root.margin
             width: root.innerWidth
-            visible: !Stats.loading && !Stats.hasData && !root.needsUsername && Stats.errorMessage.length === 0
+            visible: !Stats.loading && !Stats.hasData && !root.needsUsername && !root.needsLastFm && Stats.errorMessage.length === 0
             symbol: "insights"
-            title: root.usesStatsFm ? qsTr("Nothing for %1").arg(root.periodNames[Stats.period]) : qsTr("No plays yet")
+            title: root.usesStatsFm ? qsTr("Nothing for %1").arg(root.periodNames[Stats.period])
+                 : root.usesLastFm ? qsTr("Nothing for %1 on Last.fm").arg(root.periodNames[Stats.period])
+                 : qsTr("No plays yet")
             description: root.usesStatsFm
                 ? qsTr("stats.fm has no plays for this period. Try a longer one.")
-                : Stats.tracking
+                : root.usesLastFm
+                  ? qsTr("Last.fm has no plays for this period. Try a longer one.")
+                  : Stats.tracking
                   ? (Stats.historyCount > 0
                      ? qsTr("Nothing played %1. Try a longer period.").arg(root.periodNames[Stats.period])
                      : qsTr("Songs you listen to for 30 seconds or more show up here."))
@@ -501,11 +567,11 @@ Flickable {
         Card {
             x: root.margin
             width: root.innerWidth
-            visible: Stats.topGenres.count > 0 || (!root.usesStatsFm && Stats.hasData)
+            visible: Stats.topGenres.count > 0 || (!root.usesRemote && Stats.hasData)
             title: qsTr("Top Genres")
             symbol: "sell"
             iconShape: "clover8"
-            note: !root.usesStatsFm && Stats.topGenres.count === 0
+            note: !root.usesRemote && Stats.topGenres.count === 0
                   ? (Session.libraryConnected ? qsTr("Looking up your artists…") : qsTr("Connect your library to see genres")) : ""
 
             Flow {

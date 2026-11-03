@@ -22,15 +22,15 @@
 
 namespace swiftify::paths {
 
-/// what the app keeps of the person's, such as their local playlists, created
-/// on first use: $XDG_DATA_HOME/Tubify on linux, ~/Library/Application
-/// Support/Tubify on macos.
+/// %LOCALAPPDATA%\Tubify on windows, $XDG_DATA_HOME/Tubify on linux, and
+/// ~/Library/Application Support/Tubify on macos: what the app keeps of the
+/// person's, such as their local playlists and listening history.
 QString dataDirectory();
-/// for artwork and other things safe to delete: $XDG_CACHE_HOME/Tubify on
-/// linux, ~/Library/Caches/Tubify on macos.
+/// the system's cache folder with Tubify inside it, for artwork and songs
+/// kept to play again: things safe to delete, kept apart from the data.
 QString cacheDirectory();
-/// for diagnostic output: dataDirectory()/logs on linux, ~/Library/Logs/Tubify
-/// on macos, where console.app lists it.
+/// for diagnostic output: dataDirectory()/logs on windows and linux,
+/// ~/Library/Logs/Tubify on macos, where console.app lists it.
 QString logDirectory();
 /// logDirectory()/tubify.log
 QString logFilePath();

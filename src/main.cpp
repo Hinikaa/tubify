@@ -374,6 +374,10 @@ int main(int argc, char *argv[])
     QObject::connect(&translations, &Translations::languageChanged, &engine, &QQmlEngine::retranslate);
 #ifdef Q_OS_WIN
     WindowsIntegration windowsIntegration(&player, &theme);
+    // a shutdown or a sign-out closes the window for good rather than hiding
+    // it, so it cannot hold the session open
+    QObject::connect(&windowsIntegration, &WindowsIntegration::sessionEnding,
+                     &app, &AppController::prepareForShutdown);
     engine.setInitialProperties({{QStringLiteral("visible"), false}});
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &windowsIntegration,
                      [&windowsIntegration](QObject *object, const QUrl &) {

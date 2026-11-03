@@ -230,10 +230,13 @@ build_dependency qcoro https://github.com/qcoro/qcoro.git v0.13.0 \
     -DQCORO_WITH_QML=OFF -DQCORO_WITH_QTTEST=OFF -DQCORO_BUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF
 
 # 4. cross-build swiftify
+# the deployment below bundles qt itself, and there is no windows windeployqt
+# to run here anyway
 cmake -S "$SOURCE" -B "$WORK/swiftify" "${common[@]}" \
     "-DSWIFTIFY_SHAPE_ATLAS_TOOL=$SHAPE_ATLAS" \
     "${RUST_CMAKE_ARGS[@]}" \
     -DSWIFTIFY_BUNDLED_QT=ON \
+    -DSWIFTIFY_WINDOWS_DEPLOY_QT=OFF \
     "-DCMAKE_INSTALL_PREFIX=$STAGE"
 cmake --build "$WORK/swiftify" --parallel "$JOBS"
 rm -rf "${STAGE:?}"
@@ -286,10 +289,10 @@ while :; do
     $copied || break
 done
 
-[[ -f "$STAGE/share/licenses/swiftify/LICENSE" ]] || fail "the license is missing"
+[[ -f "$STAGE/share/licenses/tubify/LICENSE" ]] || fail "the license is missing"
 for license in material-color-utilities.LICENSE rounded-polygon-qmljs.LICENSE material-symbols.LICENSE \
     rust-crates.LICENSE qt.LICENSE qt.NOTICE qtkeychain.LICENSE qcoro.LICENSE; do
-    [[ -f "$STAGE/share/licenses/swiftify/$license" ]] || fail "$license is missing"
+    [[ -f "$STAGE/share/licenses/tubify/$license" ]] || fail "$license is missing"
 done
 
 cat > "$BIN/qt.conf" <<'EOF'

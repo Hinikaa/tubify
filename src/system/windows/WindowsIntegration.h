@@ -46,12 +46,19 @@ public:
 
     void handleMediaButton(int button);
 
+signals:
+    /// windows is signing the person out or shutting down, and what is kept has
+    /// to be written before it does. the window closes for good from here: one
+    /// that hid to the tray instead would hold the shutdown up
+    void sessionEnding();
+
 private:
     struct Native;
 
     void attachWindow();
     void styleWindow();
     void initializeTaskbar();
+    void initializeJumpList();
     void updateButtons();
     void updateProgress();
     void initializeMediaControls();

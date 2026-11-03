@@ -11,28 +11,7 @@ use std::{
     time::Duration,
 };
 
-use tokio::process::Command;
-
-/// a user's pipx or mise shim can be older than the distro's yt-dlp, and the
-/// older one can fail on a video the newer one plays. the distro's is used
-/// when it is there, and the PATH is only a fallback.
-fn yt_dlp() -> Command {
-    let system = Path::new("/usr/bin/yt-dlp");
-    if system.is_file() {
-        Command::new(system)
-    } else {
-        Command::new("yt-dlp")
-    }
-}
-
-fn ffmpeg() -> Command {
-    let system = Path::new("/usr/bin/ffmpeg");
-    if system.is_file() {
-        Command::new(system)
-    } else {
-        Command::new("ffmpeg")
-    }
-}
+use crate::tools::{ffmpeg, missing_yt_dlp, yt_dlp};
 
 const MIN_CACHED_BYTES: u64 = 100_000;
 
@@ -144,8 +123,7 @@ async fn run(
         .map_err(|_| "Fetching the song from YouTube Music timed out.".to_owned())?
         .map_err(|error| {
             if error.kind() == std::io::ErrorKind::NotFound {
-                "yt-dlp is not installed. Install it (pacman -S yt-dlp) so Tubify can fetch songs."
-                    .to_owned()
+                missing_yt_dlp().to_owned()
             } else {
                 format!("could not start yt-dlp: {error}")
             }
@@ -217,7 +195,13 @@ async fn run(
         .stderr(Stdio::null())
         .status()
         .await
-        .map_err(|error| format!("could not convert the song with ffmpeg: {error}"))?;
+        .map_err(|error| {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                crate::tools::missing_ffmpeg().to_owned()
+            } else {
+                format!("could not convert the song with ffmpeg: {error}")
+            }
+        })?;
     if !status.success() {
         return Err("ffmpeg could not convert the downloaded song.".to_owned());
     }

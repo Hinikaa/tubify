@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/prebuilt.yml
+      - tests/check_windows_build.ps1
       - tools/build-windows.ps1
       - tools/build-linux-tarball.sh
       - tools/build-macos-dmg.sh
@@ -30,12 +31,16 @@ jobs:
         id: version
         shell: bash
         run: |
-          version="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          version="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [[ -z "$version" ]]; then
+            echo "no version in CMakeLists.txt" >&2
+            exit 1
+          fi
           if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "the tag $GITHUB_REF_NAME does not match the version $version in CMakeLists.txt" >&2
             exit 1
           fi
-          echo "name=swiftify-$version-windows-x86_64" >> "$GITHUB_OUTPUT"
+          echo "name=tubify-$version-windows-x86_64" >> "$GITHUB_OUTPUT"
 
       # as ctest runs it. the test runs a failing command on purpose, which a
       # plain pwsh step would report as its own exit code
@@ -115,7 +120,7 @@ jobs:
 
       - name: version
         run: |
-          version="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          version="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
           if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "the tag $GITHUB_REF_NAME does not match the version $version in CMakeLists.txt" >&2
             exit 1

@@ -22,6 +22,8 @@
 #include "theme/Theme.h"
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QDir>
 #include <QImage>
 #include <QPlatformSurfaceEvent>
 #include <QQuickWindow>
@@ -34,8 +36,8 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <dwmapi.h>
+#include <propsys.h>
 #include <shobjidl.h>
-
 #ifdef SWIFTIFY_HAVE_SMTC
 // mingw-w64's windows.foundation.h specialises IReference for BYTE and for
 // boolean, which it also makes an unsigned char; nothing here uses either
@@ -47,6 +49,7 @@
 #include <wrl/client.h>
 #include <wrl/wrappers/corewrappers.h>
 #include <windows.media.h>
+#include <windows.storage.streams.h>
 #include <systemmediatransportcontrolsinterop.h>
 #endif
 
@@ -55,6 +58,7 @@
 #include <atomic>
 #include <cwchar>
 #include <functional>
+#include <iterator>
 
 namespace swiftify {
 
@@ -64,6 +68,8 @@ constexpr UINT kPrevious = 1;
 constexpr UINT kPlayPause = 2;
 constexpr UINT kNext = 3;
 constexpr DWORD kImmersiveDarkMode = 20;
+/// what windows 10 built before 1809 called the same thing
+constexpr DWORD kImmersiveDarkModeBefore1809 = 19;
 constexpr DWORD kCornerPreference = 33;
 constexpr DWORD kBorderColor = 34;
 constexpr DWORD kCaptionColor = 35;
@@ -72,6 +78,47 @@ constexpr DWORD kTextColor = 36;
 COLORREF nativeColor(const QColor &color)
 {
     return RGB(color.red(), color.green(), color.blue());
+}
+
+// the shell's title property, written out rather than taken from propkey.h,
+// which not every toolchain's headers carry
+const PROPERTYKEY kTitleProperty {
+    {0xf29f85e0, 0x4ff9, 0x1068, {0xab, 0x91, 0x08, 0x00, 0x2b, 0x27, 0xb3, 0xd9}}, 2
+};
+
+/// a task on the jump list: a launch of this same app with an argument the
+/// copy already running takes over
+HRESULT addJumpListTask(IObjectCollection *tasks, const wchar_t *title, const wchar_t *arguments)
+{
+    IShellLinkW *link = nullptr;
+    HRESULT result = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&link));
+    if (FAILED(result) || !link) {
+        return FAILED(result) ? result : E_FAIL;
+    }
+    const QString executable = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    const auto path = reinterpret_cast<LPCWSTR>(executable.utf16());
+    link->SetPath(path);
+    link->SetArguments(arguments);
+    link->SetIconLocation(path, 0);
+
+    IPropertyStore *store = nullptr;
+    result = link->QueryInterface(IID_PPV_ARGS(&store));
+    if (SUCCEEDED(result) && store) {
+        PROPVARIANT value {};
+        value.vt = VT_LPWSTR;
+        // borrowed: the store copies it, and nothing here clears the variant
+        value.pwszVal = const_cast<LPWSTR>(title);
+        result = store->SetValue(kTitleProperty, value);
+        if (SUCCEEDED(result)) {
+            result = store->Commit();
+        }
+        store->Release();
+    }
+    if (SUCCEEDED(result)) {
+        result = tasks->AddObject(link);
+    }
+    link->Release();
+    return result;
 }
 
 #ifdef SWIFTIFY_HAVE_SMTC
@@ -136,6 +183,7 @@ struct WindowsIntegration::Native {
     UINT taskbarCreated = RegisterWindowMessageW(L"TaskbarButtonCreated");
     bool ownsCom = false;
     bool buttonsAdded = false;
+    bool jumpListAdded = false;
     QSet<quintptr> readyWindows;
     HWND handle = nullptr;
     std::array<HICON, 4> icons {};
@@ -190,6 +238,12 @@ struct WindowsIntegration::Native {
         auto *integration = reinterpret_cast<WindowsIntegration *>(context);
         if (message == WM_THEMECHANGED || message == WM_DWMCOMPOSITIONCHANGED || message == WM_STYLECHANGED) {
             QTimer::singleShot(0, integration, &WindowsIntegration::styleWindow);
+        }
+        if (message == WM_QUERYENDSESSION) {
+            // this runs before qt's own window procedure, which closes the
+            // windows when the session ends: a window that hid to the tray
+            // there would refuse the close and hold the shutdown up
+            emit integration->sessionEnding();
         }
         if (integration->m_window && !(GetWindowLongPtrW(window, GWL_STYLE) & WS_CAPTION)) {
             if (message == WM_NCCALCSIZE) {
@@ -252,7 +306,11 @@ struct WindowsIntegration::Native {
 
 void WindowsIntegration::initializeProcess()
 {
-    SetCurrentProcessExplicitAppUserModelID(L"dev.addenator.Swiftify.Qt");
+    // no explicit app user model id: windows then takes one from the
+    // executable's path, which is the same one its shortcuts get, so a
+    // pinned button and the running window are the same button. an id of our
+    // own would have to be written into the installer's shortcuts as well,
+    // and one set here alone would show two.
     const HANDLE err = GetStdHandle(STD_ERROR_HANDLE);
     if ((err && err != INVALID_HANDLE_VALUE && GetFileType(err) != FILE_TYPE_UNKNOWN)
         || AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -410,7 +468,10 @@ void WindowsIntegration::styleWindow()
     const COLORREF border = 0xfffffffe;
     const COLORREF caption = nativeColor(background);
     const COLORREF text = dark ? RGB(255, 255, 255) : RGB(0, 0, 0);
-    DwmSetWindowAttribute(handle, kImmersiveDarkMode, &dark, sizeof(dark));
+    if (FAILED(DwmSetWindowAttribute(handle, kImmersiveDarkMode, &dark, sizeof(dark)))) {
+        // windows 10 before 1809 knew the attribute by its first number
+        DwmSetWindowAttribute(handle, kImmersiveDarkModeBefore1809, &dark, sizeof(dark));
+    }
     DwmSetWindowAttribute(handle, kCornerPreference, &corners, sizeof(corners));
     DwmSetWindowAttribute(handle, kBorderColor, &border, sizeof(border));
     DwmSetWindowAttribute(handle, kCaptionColor, &caption, sizeof(caption));
@@ -433,6 +494,53 @@ void WindowsIntegration::initializeTaskbar()
         }
     }
     updateButtons();
+    initializeJumpList();
+}
+
+void WindowsIntegration::initializeJumpList()
+{
+    if (!m_native || m_native->jumpListAdded) return;
+    // one try, whatever comes of it: a shell without a jump list (a session
+    // that is not the shell's own, a policy against them) is not an error
+    m_native->jumpListAdded = true;
+    ICustomDestinationList *list = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_DestinationList, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&list))) || !list) {
+        return;
+    }
+    // "slots" would be qt's keyword macro, and "capacity" is what the shell
+    // calls it anyway: how many items it has room for
+    UINT capacity = 0;
+    IObjectArray *removed = nullptr;
+    if (FAILED(list->BeginList(&capacity, IID_PPV_ARGS(&removed)))) {
+        list->Release();
+        return;
+    }
+    IObjectCollection *tasks = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_EnumerableObjectCollection, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&tasks))) || !tasks) {
+        if (removed) removed->Release();
+        list->Release();
+        return;
+    }
+    // the arguments are the ones a second launch forwards to this copy
+    addJumpListTask(tasks, L"Play or pause", L"--play-pause");
+    addJumpListTask(tasks, L"Next", L"--next");
+    addJumpListTask(tasks, L"Previous", L"--previous");
+    IObjectArray *array = nullptr;
+    if (SUCCEEDED(tasks->QueryInterface(IID_PPV_ARGS(&array))) && array) {
+        // the shell wants what it listed back before the list is committed
+        if (removed) {
+            removed->Release();
+            removed = nullptr;
+        }
+        list->AddUserTasks(array);
+        list->CommitList();
+        array->Release();
+    }
+    if (removed) removed->Release();
+    tasks->Release();
+    list->Release();
 }
 
 void WindowsIntegration::updateButtons()
@@ -462,7 +570,7 @@ void WindowsIntegration::updateButtons()
         m_native->taskbar->ThumbBarUpdateButtons(handle, UINT(buttons.size()), buttons.data());
     }
     const Song song = m_player->currentSong();
-    const QString tooltip = m_player->hasSong() ? song.name + QStringLiteral(" — ") + song.artists : QStringLiteral("Swiftify");
+    const QString tooltip = m_player->hasSong() ? song.name + QStringLiteral(" — ") + song.artists : QStringLiteral("Tubify");
     m_native->taskbar->SetThumbnailTooltip(handle, reinterpret_cast<LPCWSTR>(tooltip.utf16()));
     updateProgress();
 }

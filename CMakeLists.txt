@@ -46,12 +46,18 @@ endif()
 
 # on windows <cmath> gives M_PI only when asked, and windows.h's min and
 # max macros are kept off std::min and std::max; msvc also reads the
-# sources as utf-8
+# sources as utf-8. the wide-character api is what the shell wants, so the
+# unicode names of windows' functions are the ones called
 if(WIN32)
-    add_compile_definitions(_USE_MATH_DEFINES NOMINMAX)
+    add_compile_definitions(_USE_MATH_DEFINES NOMINMAX UNICODE _UNICODE)
 endif()
 if(MSVC)
     add_compile_options(/utf-8)
+    # the dynamic runtime qt's own binaries are built against, so one heap is
+    # shared with them. windeployqt puts the redistributable's dlls beside the
+    # executable, and the installer carries them too: nothing has to be
+    # installed first
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
 include(GNUInstallDirs)
@@ -150,11 +156,12 @@ if(APPLE)
         "-framework IOKit" "-framework CoreFoundation" "-framework Foundation"
         "-framework SystemConfiguration" "-framework Security" objc iconv)
 elseif(WIN32)
-    # windows: wasapi for audio, schannel for tls, and what rust's std
-    # needs; the linker leaves out any of them nothing uses
+    # windows: wasapi for audio, and what rust's std needs on it, dbghelp
+    # among them for the backtraces it takes. the linker leaves out any of
+    # them nothing uses
     target_link_libraries(ytmusic_core INTERFACE
         ws2_32 userenv bcrypt ntdll advapi32 kernel32 user32 shell32 ole32 oleaut32
-        propsys crypt32 secur32 ncrypt runtimeobject synchronization)
+        propsys crypt32 secur32 ncrypt runtimeobject synchronization dbghelp)
 else()
     find_package(ALSA REQUIRED)
     find_package(OpenSSL REQUIRED)
@@ -431,9 +438,27 @@ endif()
 # in its resources so explorer and a pinned taskbar button show it
 set_target_properties(swiftify PROPERTIES WIN32_EXECUTABLE ON)
 if(WIN32)
-    set_source_files_properties(packaging/icons/tubify.rc
-        PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico)
-    target_sources(swiftify PRIVATE packaging/icons/tubify.rc)
+    # the icon, the version explorer shows in the file's properties, and the
+    # manifest asking for per-monitor dpi and the common controls the taskbar
+    # draws with. the numbers come from the project's version, so the file
+    # cannot claim one the build does not have
+    set(SWIFTIFY_WINDOWS_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/tubify.manifest)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico" SWIFTIFY_WINDOWS_ICON_PATH)
+    string(REPLACE "\\" "\\\\" SWIFTIFY_WINDOWS_ICON ${SWIFTIFY_WINDOWS_ICON_PATH})
+    set(SWIFTIFY_WINDOWS_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/tubify.rc)
+    configure_file(packaging/icons/tubify.rc.in ${SWIFTIFY_WINDOWS_RESOURCE} @ONLY)
+    set_source_files_properties(${SWIFTIFY_WINDOWS_RESOURCE} PROPERTIES
+        OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico")
+    target_sources(swiftify PRIVATE ${SWIFTIFY_WINDOWS_RESOURCE})
+    # qt writes a manifest of its own into every windows executable it is told
+    # about, unless the target carries one: it goes in the sources so qt leaves
+    # it alone, and msvc's linker embeds this one rather than a second
+    target_sources(swiftify PRIVATE ${SWIFTIFY_WINDOWS_MANIFEST})
+    set_target_properties(swiftify PROPERTIES
+        QT_WINDOWS_APP_PROJECT_IDENTIFIER "dev.hinikaa.Tubify")
+    if(MSVC)
+        target_link_options(swiftify PRIVATE /MANIFEST:NO)
+    endif()
 endif()
 if(MINGW)
     # qt's WinMain shim reads msvcrt's __argc, which a mingw on ucrt (as
@@ -539,7 +564,7 @@ if(APPLE)
         MACOSX_BUNDLE_ICON_FILE ${SWIFTIFY_ICON_FILE_NAME}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${SWIFTIFY_BUILD_NUMBER}
-        MACOSX_BUNDLE_COPYRIGHT "Copyright 2026 Hinika. Licensed under the GNU GPL v3 or later")
+        MACOSX_BUNDLE_COPYRIGHT "Copyright 2026 Hinikaa. Licensed under the GNU GPL v3 or later")
 
     # signing. the linker signs only the executable; signing the bundle seals
     # the icon and the font in with it, so the whole app checks out. a folder
@@ -607,8 +632,8 @@ if(APPLE)
     endif()
     set(CPACK_GENERATOR "DragNDrop;ZIP")
     set(CPACK_PACKAGE_NAME "Tubify")
-    set(CPACK_PACKAGE_VENDOR "Hinika")
-    set(CPACK_PACKAGE_CONTACT "Hinika")
+    set(CPACK_PACKAGE_VENDOR "Hinikaa")
+    set(CPACK_PACKAGE_CONTACT "Hinikaa")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
     set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
     set(CPACK_PACKAGE_FILE_NAME "Tubify-${PROJECT_VERSION}-macos-${SWIFTIFY_PACKAGE_ARCH}")
@@ -659,9 +684,89 @@ if(NOT APPLE AND NOT WIN32)
     endforeach()
 endif()
 
-# after every install rule above, so cpack's staging run carries them all.
-# only macos has a package: the linux tarball and the windows zip are the
-# scripts in tools/, which bundle more than cpack's install rules do
 if(APPLE)
+    include(CPack)
+endif()
+
+# --- windows packaging ---------------------------------------------------------
+
+if(WIN32)
+    # qt's dlls, plugins and qml modules beside the executable, so that
+    # `cmake --install` and cpack produce a folder that runs on a machine with
+    # no qt. tools/build-windows.ps1 deploys after installing by itself and
+    # turns this off, so the work is done once either way; a cross build has no
+    # windows windeployqt to run, and bundles what it needs by hand
+    if(CMAKE_CROSSCOMPILING)
+        set(SWIFTIFY_WINDOWS_DEPLOY_QT_DEFAULT OFF)
+    else()
+        set(SWIFTIFY_WINDOWS_DEPLOY_QT_DEFAULT ON)
+    endif()
+    option(SWIFTIFY_WINDOWS_DEPLOY_QT "Deploy Qt beside the executable during cmake --install"
+        ${SWIFTIFY_WINDOWS_DEPLOY_QT_DEFAULT})
+    if(SWIFTIFY_WINDOWS_DEPLOY_QT)
+        get_target_property(SWIFTIFY_QMAKE Qt6::qmake IMPORTED_LOCATION)
+        get_filename_component(SWIFTIFY_QT_BIN_DIR "${SWIFTIFY_QMAKE}" DIRECTORY)
+        find_program(SWIFTIFY_WINDEPLOYQT windeployqt
+            HINTS "${SWIFTIFY_QT_BIN_DIR}" REQUIRED)
+        configure_file(cmake/WindowsDeploy.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/WindowsDeploy.cmake @ONLY)
+        install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/WindowsDeploy.cmake)
+    endif()
+
+    # the tools a song is fetched and converted with. a copy beside the
+    # executable is the one the core runs, so a package can carry its own
+    # instead of asking for an install; without one, the core falls back to
+    # the PATH and says how to install it. the downloads are not made at
+    # configure time: they are the packager's to place
+    set(SWIFTIFY_WINDOWS_YTDLP "" CACHE FILEPATH "yt-dlp.exe to ship beside the app")
+    set(SWIFTIFY_WINDOWS_FFMPEG "" CACHE FILEPATH "ffmpeg.exe to ship beside the app")
+    foreach(tool IN ITEMS SWIFTIFY_WINDOWS_YTDLP SWIFTIFY_WINDOWS_FFMPEG)
+        if(${tool})
+            install(PROGRAMS ${${tool}} DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif()
+    endforeach()
+
+    # an installer for a normal install, and a zip for a folder that runs
+    # wherever it is unpacked
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_PACKAGE_NAME "Tubify")
+    set(CPACK_PACKAGE_VENDOR "Hinikaa")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "Tubify")
+    set(CPACK_PACKAGE_FILE_NAME "tubify-${PROJECT_VERSION}-windows-x86_64")
+    set(CPACK_PACKAGE_EXECUTABLES "swiftify" "Tubify")
+    set(CPACK_CREATE_DESKTOP_LINKS "swiftify")
+    # the gpl goes out with every copy, and the installer shows it
+    set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+    set(CPACK_PACKAGE_CONTACT "Hinikaa")
+    set(CPACK_NSIS_DISPLAY_NAME "Tubify")
+    set(CPACK_NSIS_PACKAGE_NAME "Tubify")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\swiftify.exe")
+    set(CPACK_NSIS_EXECUTABLES_DIRECTORY "bin")
+    set(CPACK_NSIS_MUI_ICON ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico)
+    set(CPACK_NSIS_MUI_UNIICON ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/tubify.ico)
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MODIFY_PATH OFF)
+    set(CPACK_NSIS_MENU_LINKS "https://music.youtube.com" "YouTube Music")
+    # the key an upgrade looks for, so a new version replaces the old one
+    set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "Tubify")
+
+    # signing, off until a certificate is there. the executable the package
+    # carries is signed before it is packaged, and the installer after it is
+    # built
+    option(SWIFTIFY_WINDOWS_SIGN "Sign the windows build with signtool" OFF)
+    set(SWIFTIFY_WINDOWS_SIGNTOOL "" CACHE FILEPATH "signtool.exe, from a windows sdk")
+    set(SWIFTIFY_WINDOWS_SIGN_CERTIFICATE "" CACHE FILEPATH
+        "the .pfx to sign with; empty uses a certificate from the machine's store")
+    set(SWIFTIFY_WINDOWS_SIGN_TIMESTAMP "http://timestamp.digicert.com" CACHE STRING
+        "the timestamp server a signature is countersigned by")
+    if(SWIFTIFY_WINDOWS_SIGN)
+        configure_file(cmake/WindowsSign.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/WindowsSign.cmake @ONLY)
+        set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_CURRENT_BINARY_DIR}/WindowsSign.cmake)
+        set(CPACK_POST_BUILD_SCRIPTS ${CMAKE_CURRENT_BINARY_DIR}/WindowsSign.cmake)
+    endif()
+
     include(CPack)
 endif()

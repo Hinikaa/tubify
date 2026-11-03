@@ -109,6 +109,10 @@ public:
     void handleCommand(const QString &command);
 
     Q_INVOKABLE void quit();
+    /// the system is shutting down or signing the person out: the windows
+    /// close for good from here. one that hid to the tray instead would refuse
+    /// the close, and hold the shutdown up until it was cancelled
+    void prepareForShutdown();
     /// gives back what a view that has just gone held: its script objects,
     /// the scene graph's caches nothing uses now, and the heap pages that
     /// freeing left empty, which the system counts against the app until

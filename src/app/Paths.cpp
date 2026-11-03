@@ -31,20 +31,42 @@ QString ensured(const QString &path)
     return path;
 }
 
+/// a writable location the system gives, with Tubify's own folder inside it
+/// and `tail` under that. the generic locations are the ones that do not wait
+/// on the application's name being set: on windows they are the local app data
+/// folder, and on linux $XDG_DATA_HOME and $XDG_CACHE_HOME
+QString location(QStandardPaths::StandardLocation kind, const QString &fallback, const QString &tail = {})
+{
+    QString base = QStandardPaths::writableLocation(kind);
+    if (base.isEmpty()) {
+        base = fallback;
+    }
+    return ensured(base + QStringLiteral("/Tubify") + tail);
+}
+
 } // namespace
 
 QString dataDirectory()
 {
-    // generic, not per-app: the location is the same whichever way the app is
-    // named, so a build of another name keeps the same library
-    return ensured(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                   + QStringLiteral("/Tubify"));
+    // %LOCALAPPDATA%\Tubify on windows, $XDG_DATA_HOME/Tubify on linux,
+    // ~/Library/Application Support/Tubify on macos: what the person made
+    // here, such as their local playlists and their history
+    return location(QStandardPaths::GenericDataLocation,
+                    QDir::homePath() + QStringLiteral("/.local/share"));
 }
 
 QString cacheDirectory()
 {
-    return ensured(QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                   + QStringLiteral("/Tubify"));
+#ifdef Q_OS_WIN
+    // windows gives the same folder for the generic cache and data
+    // locations, so the cache takes one of its own inside it: clearing it must
+    // not take the playlists with it
+    return location(QStandardPaths::GenericCacheLocation,
+                    QDir::homePath() + QStringLiteral("/AppData/Local"), QStringLiteral("/cache"));
+#else
+    return location(QStandardPaths::GenericCacheLocation,
+                    QDir::homePath() + QStringLiteral("/.cache"));
+#endif
 }
 
 QString logDirectory()

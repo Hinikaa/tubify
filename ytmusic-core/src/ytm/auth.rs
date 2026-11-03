@@ -10,15 +10,22 @@ use reqwest::header::{CONTENT_TYPE, COOKIE, ORIGIN, REFERER, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha1::{Digest, Sha1};
-use tokio::process::Command;
 
 use super::models::{Profile, Thumbnail};
+use crate::tools::yt_dlp;
 
 const ACCOUNT_MENU_URL: &str =
     "https://music.youtube.com/youtubei/v1/account/account_menu?prettyPrint=false";
 const ORIGIN_URL: &str = "https://music.youtube.com";
 const SAPISID_KEYS: [&str; 3] = ["SAPISID", "__Secure-3PAPISID", "__Secure-1PASID"];
 
+/// the browser the request says it is: the same client either way, but a
+/// windows build asking as a linux one is a fingerprint worth not having.
+#[cfg(windows)]
+pub const USER_AGENT_VALUE: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+#[cfg(target_os = "macos")]
+pub const USER_AGENT_VALUE: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+#[cfg(not(any(windows, target_os = "macos")))]
 pub const USER_AGENT_VALUE: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -144,7 +151,7 @@ pub async fn import_browser(browser: &str) -> Result<Auth, String> {
     ));
     let _ = std::fs::remove_file(&path);
 
-    let output = Command::new("/usr/bin/yt-dlp")
+    let output = yt_dlp()
         .arg("--cookies-from-browser")
         .arg(&spec)
         .arg("--cookies")
@@ -190,15 +197,8 @@ pub async fn import_browser(browser: &str) -> Result<Auth, String> {
 fn browser_spec(browser: &str) -> String {
     let name = browser.trim().to_ascii_lowercase();
     if name == "helium" {
-        let config = std::env::var("XDG_CONFIG_HOME")
-            .map(std::path::PathBuf::from)
-            .or_else(|_| std::env::var("HOME").map(|home| std::path::PathBuf::from(home).join(".config")))
-            .ok();
-        if let Some(config) = config {
-            let profile = config.join("net.imput.helium").join("Default");
-            if profile.is_dir() {
-                return format!("chromium:{}", profile.display());
-            }
+        if let Some(profile) = helium_profile() {
+            return format!("chromium:{}", profile.display());
         }
         return "chromium".to_owned();
     }
@@ -206,6 +206,22 @@ fn browser_spec(browser: &str) -> String {
         "chrome" | "chromium" | "brave" | "firefox" | "edge" | "opera" | "vivaldi" => name,
         _ => "chromium".to_owned(),
     }
+}
+
+/// where Helium keeps the profile its cookies are in: under the user's own
+/// application data on windows, and in the config folder elsewhere.
+fn helium_profile() -> Option<std::path::PathBuf> {
+    #[cfg(windows)]
+    let base = std::env::var_os("LOCALAPPDATA")
+        .map(|base| std::path::PathBuf::from(base).join("net.imput.helium").join("User Data"));
+    #[cfg(not(windows))]
+    let base = std::env::var("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|_| std::env::var("HOME").map(|home| std::path::PathBuf::from(home).join(".config")))
+        .map(|config| config.join("net.imput.helium"))
+        .ok();
+    let profile = base?.join("Default");
+    profile.is_dir().then_some(profile)
 }
 
 fn netscape_cookie_header(raw: &str) -> String {

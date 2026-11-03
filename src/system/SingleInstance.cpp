@@ -52,7 +52,17 @@ SingleInstance::SingleInstance(QObject *parent)
 
 QString SingleInstance::serverName()
 {
-    return QStringLiteral("tubify-") + QDir::home().dirName();
+    // one name per person. windows' pipes are the machine's rather than a
+    // session's, so an account's copy must not answer for another's
+#ifdef Q_OS_WIN
+    QString user = qEnvironmentVariable("USERNAME");
+    if (user.isEmpty()) {
+        user = QDir::home().dirName();
+    }
+#else
+    const QString user = QDir::home().dirName();
+#endif
+    return QStringLiteral("tubify-") + user;
 }
 
 bool SingleInstance::forwardToRunningInstance(const QStringList &arguments)

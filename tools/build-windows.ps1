@@ -21,9 +21,15 @@ param(
     [string]$QtPath,
     [string]$MingwPath,
     [string]$BuildRoot,
-    [string]$InstallPrefix = "$env:LOCALAPPDATA\Programs\Swiftify",
+    [string]$InstallPrefix = "$env:LOCALAPPDATA\Programs\Tubify",
     [ValidateRange(1, 256)]
-    [int]$Jobs = [Math]::Max(1, [Math]::Min(8, [Environment]::ProcessorCount))
+    [int]$Jobs = [Math]::Max(1, [Math]::Min(8, [Environment]::ProcessorCount)),
+    # yt-dlp.exe and ffmpeg.exe to ship beside the app, so a package fetches
+    # songs without asking for an install first
+    [string]$YtDlp,
+    [string]$Ffmpeg,
+    # build the nsis installer and the zip as well, into $BuildRoot\packages
+    [switch]$Package
 )
 
 Set-StrictMode -Version Latest
@@ -174,7 +180,7 @@ function Invoke-WindowsBuild {
     $qtConfiguration = Get-Content -LiteralPath "$QtPath\mkspecs\qconfig.pri" -Raw
     $qtVersion = [regex]::Match($qtConfiguration, '(?m)^QT_VERSION\s*=\s*(\S+)').Groups[1].Value
     if (-not $qtVersion -or [version]$qtVersion -lt [version]'6.10' -or $qtConfiguration -notmatch '(?m)^QT_ARCH\s*=\s*x86_64\s*$') {
-        throw 'Swiftify requires a Qt 6.10+ x64 kit.'
+        throw 'Tubify requires a Qt 6.10+ x64 kit.'
     }
     foreach ($module in @('Qt6Core', 'Qt6Widgets', 'Qt6Quick', 'Qt6QuickControls2', 'Qt6ShaderTools', 'Qt6WebSockets')) {
         if (-not (Test-Path -LiteralPath "$QtPath\lib\cmake\$module\${module}Config.cmake")) {
@@ -195,6 +201,7 @@ function Invoke-WindowsBuild {
         $cmake = Find-Application 'cmake.exe' @("$qtTools\CMake_64\bin\cmake.exe")
         $ninja = Find-Application 'ninja.exe' @("$qtTools\Ninja\ninja.exe")
         $deployQt = Find-Application 'windeployqt.exe' @("$QtPath\bin\windeployqt.exe")
+        $cpack = Find-Application 'cpack.exe' @("$qtTools\CMake_64\bin\cpack.exe")
         $gccMajor = [regex]::Match($qtConfiguration, '(?m)^QT_GCC_MAJOR_VERSION\s*=\s*(\d+)')
         if ($gccMajor.Success) {
             $gccMinor = [regex]::Match($qtConfiguration, '(?m)^QT_GCC_MINOR_VERSION\s*=\s*(\d+)').Groups[1].Value
@@ -268,16 +275,23 @@ function Invoke-WindowsBuild {
             Invoke-Native $cmake @('--install', $dependencyBuild) | Out-Host
         }
 
-        Write-Host 'Building Swiftify...'
+        Write-Host 'Building Tubify...'
         $appBuild = Join-Path $buildDirectory 'swiftify'
-        Invoke-Native $cmake (@('-S', $sourceRoot, '-B', $appBuild) + $commonOptions + @("-DRust_TOOLCHAIN=$rustToolchain", "-DRust_CARGO_TARGET=$rustTarget", '-DSWIFTIFY_BUNDLED_QT=ON', "-DCMAKE_INSTALL_PREFIX=$($InstallPrefix.Replace('\', '/'))")) | Out-Host
+        # the deployment below runs windeployqt itself, so the install rules
+        # leave it alone; a package is made by cpack from the install rules,
+        # so then it is theirs
+        $deployOption = if ($Package) { '-DSWIFTIFY_WINDOWS_DEPLOY_QT=ON' } else { '-DSWIFTIFY_WINDOWS_DEPLOY_QT=OFF' }
+        $toolOptions = @()
+        if ($YtDlp) { $toolOptions += "-DSWIFTIFY_WINDOWS_YTDLP=$($YtDlp.Replace('\', '/'))" }
+        if ($Ffmpeg) { $toolOptions += "-DSWIFTIFY_WINDOWS_FFMPEG=$($Ffmpeg.Replace('\', '/'))" }
+        Invoke-Native $cmake (@('-S', $sourceRoot, '-B', $appBuild) + $commonOptions + @("-DRust_TOOLCHAIN=$rustToolchain", "-DRust_CARGO_TARGET=$rustTarget", '-DSWIFTIFY_BUNDLED_QT=ON', $deployOption, "-DCMAKE_INSTALL_PREFIX=$($InstallPrefix.Replace('\', '/'))") + $toolOptions) | Out-Host
         Invoke-Native $cmake @('--build', $appBuild, '--parallel', "$Jobs") | Out-Host
         Invoke-Native $cmake @('--install', $appBuild) | Out-Host
-        if (-not (Test-Path -LiteralPath (Join-Path $InstallPrefix 'share\licenses\swiftify\LICENSE') -PathType Leaf)) {
+        if (-not (Test-Path -LiteralPath (Join-Path $InstallPrefix 'share\licenses\tubify\LICENSE') -PathType Leaf)) {
             throw 'The license was not installed.'
         }
         foreach ($license in @('material-color-utilities.LICENSE', 'rounded-polygon-qmljs.LICENSE', 'material-symbols.LICENSE', 'rust-crates.LICENSE', 'qt.LICENSE', 'qt.NOTICE', 'qtkeychain.LICENSE', 'qcoro.LICENSE')) {
-            if (-not (Test-Path -LiteralPath (Join-Path $InstallPrefix "share\licenses\swiftify\$license") -PathType Leaf)) {
+            if (-not (Test-Path -LiteralPath (Join-Path $InstallPrefix "share\licenses\tubify\$license") -PathType Leaf)) {
                 throw "$license was not installed."
             }
         }
@@ -307,7 +321,30 @@ function Invoke-WindowsBuild {
                 Copy-Item -LiteralPath $runtimePath -Destination $installBin -Force
             }
         }
-        Write-Host "Installed Swiftify. Run: & `"$executable`""
+        # a folder that runs on a machine with no qt: the dlls, and the
+        # platform plugin without which nothing is drawn
+        foreach ($required in @('swiftify.exe', 'Qt6Core.dll')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $installBin $required) -PathType Leaf)) {
+                throw "$required is missing from $installBin"
+            }
+        }
+        $platformPlugin = @('platforms\qwindows.dll', 'plugins\platforms\qwindows.dll') |
+            Where-Object { Test-Path -LiteralPath (Join-Path $installBin $_) -PathType Leaf } |
+            Select-Object -First 1
+        if (-not $platformPlugin) {
+            throw 'windeployqt did not deploy the qt platform plugin.'
+        }
+        if ($Package) {
+            # the installer and the zip, made from the same install rules: cpack
+            # deploys qt itself, so the package carries everything
+            $packageDirectory = Join-Path $BuildRoot 'packages'
+            New-Item -ItemType Directory -Path $packageDirectory -Force | Out-Null
+            Invoke-Native $cpack @('--config', (Join-Path $appBuild 'CPackConfig.cmake'), '-B', $packageDirectory) | Out-Host
+            foreach ($package in Get-ChildItem -LiteralPath $packageDirectory -File) {
+                Write-Host "Package: $($package.FullName)"
+            }
+        }
+        Write-Host "Installed Tubify. Run: & `"$executable`""
     } finally {
         foreach ($entry in Get-ChildItem Env:) {
             if (-not $originalEnvironment.ContainsKey($entry.Name)) {
@@ -323,7 +360,7 @@ function Invoke-WindowsBuild {
 
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        Invoke-WindowsBuild -QtPath $QtPath -MingwPath $MingwPath -BuildRoot $BuildRoot -InstallPrefix $InstallPrefix -Jobs $Jobs
+        Invoke-WindowsBuild -QtPath $QtPath -MingwPath $MingwPath -BuildRoot $BuildRoot -InstallPrefix $InstallPrefix -Jobs $Jobs -YtDlp $YtDlp -Ffmpeg $Ffmpeg -Package ([bool]$Package)
     } catch {
         Write-Error $_ -ErrorAction Continue
         exit 1

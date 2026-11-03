@@ -1,0 +1,66 @@
+#[[
+    Swiftify, a spotify player for desktop
+    Copyright (C) 2026  shred0s
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+]]
+
+# runs from `cmake --install` and from cpack: qt's dlls, its plugins and the
+# qml modules the interface imports go beside the executable, which is where
+# qt looks for them, so the folder runs on a machine that has no qt installed.
+#
+# the compiler's own runtime comes too, so nothing has to be installed first.
+#
+# tools/build-windows.ps1 deploys after installing by itself, and configures
+# with -DSWIFTIFY_WINDOWS_DEPLOY_QT=OFF so that this does not run twice.
+
+set(_prefix "${CMAKE_INSTALL_PREFIX}")
+set(_bin "${_prefix}/@CMAKE_INSTALL_BINDIR@")
+set(_executable "${_bin}/swiftify.exe")
+set(_deployqt "@SWIFTIFY_WINDEPLOYQT@")
+
+if(NOT EXISTS "${_executable}")
+    message(FATAL_ERROR "windeployqt: there is no ${_executable} to deploy beside")
+endif()
+
+# the build a debug one, its qt dlls are the debug ones
+if(CMAKE_INSTALL_CONFIG_NAME STREQUAL "Debug")
+    set(_flavour --debug)
+else()
+    set(_flavour --release)
+endif()
+
+execute_process(
+    COMMAND "${_deployqt}" ${_flavour} --force --compiler-runtime
+            --dir "${_bin}"
+            --qmldir "@CMAKE_CURRENT_SOURCE_DIR@/qml"
+            "${_executable}"
+    RESULT_VARIABLE _result
+    OUTPUT_VARIABLE _output
+    ERROR_VARIABLE _output)
+
+if(NOT _result EQUAL 0)
+    message(FATAL_ERROR "windeployqt failed (${_result}):\n${_output}")
+endif()
+if(_output)
+    string(STRIP "${_output}" _output)
+    message(STATUS "windeployqt: ${_output}")
+endif()
+
+# qt finds the plugins beside the executable already. the file says where they
+# and the qml modules are, so a folder moved somewhere else still does
+file(WRITE "${_bin}/qt.conf"
+    "[Paths]\n"
+    "Plugins = .\n"
+    "QmlImports = qml\n")

@@ -526,6 +526,8 @@ Item {
                     text: qsTr("When off, closing the window quits and stops playback. When on, it hides and keeps playing.")
                 }
                 NoteText {
+                    // only while it is on: off, the window closes for good
+                    visible: Settings.keepRunningInBackground
                     text: App.windows
                         ? qsTr("closing the window keeps Tubify running in the tray. choose Quit Tubify from the tray menu to exit.")
                         : qsTr("window buttons are for desktops that draw none of their own, Hyprland closes and moves windows itself")

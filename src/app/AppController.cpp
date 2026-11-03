@@ -413,11 +413,21 @@ void AppController::writeCensus(const QString &path) const
 
 void AppController::quit()
 {
+    prepareForShutdown();
+    QCoreApplication::quit();
+}
+
+void AppController::prepareForShutdown()
+{
     if (!m_quitting) {
         m_quitting = true;
         emit quittingChanged();
     }
-    QCoreApplication::quit();
+    // what was changed is written now rather than at the next sync: the
+    // session may be gone before this process is asked to end
+    if (Settings *settings = Settings::instance()) {
+        settings->sync();
+    }
 }
 
 void AppController::copyToClipboard(const QString &text) const

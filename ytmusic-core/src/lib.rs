@@ -44,6 +44,7 @@ pub mod live_input;
 pub mod local;
 mod output;
 mod spectrum;
+mod tools;
 pub mod ytm;
 
 #[cfg(feature = "capi")]
@@ -200,7 +201,13 @@ fn start_logging() {
     let _ = env_logger::Builder::from_default_env().try_init();
 }
 
+/// where songs are kept when the front end does not say. it always does, but
+/// the core still has somewhere to put them when it is used on its own.
 fn default_cache_directory() -> PathBuf {
+    #[cfg(windows)]
+    if let Some(base) = std::env::var_os("LOCALAPPDATA") {
+        return PathBuf::from(base).join("Tubify").join("cache").join("audio");
+    }
     if let Ok(directory) = std::env::var("XDG_CACHE_HOME") {
         return PathBuf::from(directory).join("tubify/audio");
     }

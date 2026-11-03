@@ -30,6 +30,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrlQuery>
+#include <QCoroNetworkReply>
+#include <memory>
 #include <QLocale>
 #include <QLoggingCategory>
 #include <QQmlEngine>
@@ -79,6 +84,7 @@ StatsStore::StatsStore(Settings *settings, SpotifySession *session, QNetworkAcce
     , m_tracker(tracker)
     , m_statsFm(network)
     , m_lastFm(network)
+    , m_network(network)
     , m_topTracks(new StatsListModel(this))
     , m_topArtists(new StatsListModel(this))
     , m_topAlbums(new StatsListModel(this))
@@ -508,6 +514,7 @@ QCoro::Task<> StatsStore::loadLastFm(CancelToken token)
         const StatsSnapshot snapshot = co_await m_lastFm.snapshot(name, m_period, key);
         throwIfCancelled(token);
         apply(snapshot);
+        co_await fillLastFmArtwork();
         setLoading(false);
         m_load.finish(token);
     } catch (const Cancelled &) {
@@ -525,6 +532,57 @@ QCoro::Task<> StatsStore::loadLastFm(CancelToken token)
         setLoading(false);
         m_load.finish(token);
     }
+}
+
+QCoro::Task<QUrl> StatsStore::deezerArtwork(QString query, int kind)
+{
+    QUrl url(kind == 1 ? QStringLiteral("https://api.deezer.com/search/artist")
+                       : kind == 2 ? QStringLiteral("https://api.deezer.com/search/album")
+                                   : QStringLiteral("https://api.deezer.com/search"));
+    QUrlQuery params;
+    params.addQueryItem(QStringLiteral("q"), query);
+    params.addQueryItem(QStringLiteral("limit"), QStringLiteral("1"));
+    url.setQuery(params);
+    QNetworkRequest request(url);
+    request.setTransferTimeout(8'000);
+    std::unique_ptr<QNetworkReply> reply(m_network->get(request));
+    co_await qCoro(reply.get()).waitForFinished();
+    const QJsonArray data = QJsonDocument::fromJson(reply->readAll()).object()
+                                .value(QStringLiteral("data")).toArray();
+    if (data.isEmpty()) co_return QUrl();
+    const QJsonObject item = data.first().toObject();
+    const QString art = kind == 1 ? item.value(QStringLiteral("picture_xl")).toString()
+                       : kind == 2 ? item.value(QStringLiteral("cover_xl")).toString()
+                                   : item.value(QStringLiteral("album")).toObject()
+                                         .value(QStringLiteral("cover_xl")).toString();
+    co_return QUrl(art);
+}
+
+QCoro::Task<> StatsStore::fillLastFmArtwork()
+{
+    int budget = 30;
+    for (StatEntry &entry : m_snapshot.topTracks) {
+        if (budget-- <= 0) break;
+        if (!entry.artworkUrl.isValid()) {
+            entry.artworkUrl = co_await deezerArtwork(entry.song.artists + u' ' + entry.name, 0);
+            entry.song.artworkUrl = entry.artworkUrl;
+        }
+    }
+    for (StatEntry &entry : m_snapshot.topArtists) {
+        if (budget-- <= 0) break;
+        if (!entry.artworkUrl.isValid()) {
+            entry.artworkUrl = co_await deezerArtwork(entry.name, 1);
+            entry.artist.artworkUrl = entry.artworkUrl;
+        }
+    }
+    for (StatEntry &entry : m_snapshot.topAlbums) {
+        if (budget-- <= 0) break;
+        if (!entry.artworkUrl.isValid()) {
+            entry.artworkUrl = co_await deezerArtwork(entry.subtitle + u' ' + entry.name, 2);
+            entry.album.artworkUrl = entry.artworkUrl;
+        }
+    }
+    reorder();
 }
 
 void StatsStore::apply(const StatsSnapshot &snapshot)

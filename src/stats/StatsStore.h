@@ -207,6 +207,8 @@ private:
     QCoro::Task<> loadLastFm(CancelToken token);
     QCoro::Task<> connectLastFmAsync();
     QCoro::Task<> finishLastFmLoginAsync();
+    QCoro::Task<> fillLastFmArtwork();
+    QCoro::Task<QUrl> deezerArtwork(QString query, int kind);
     QCoro::Task<> fillGenres(QStringList artistIds, CancelToken token);
     void loadGenreCache();
     void saveGenreCache() const;
@@ -217,6 +219,7 @@ private:
     PlayTracker *m_tracker;
     StatsFmClient m_statsFm;
     LastFmClient m_lastFm;
+    QNetworkAccessManager *m_network;
     StatsPeriod m_period = StatsPeriod::Weeks;
     bool m_rankByTime = false;
     bool m_loading = false;

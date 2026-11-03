@@ -20,6 +20,8 @@
 
 #include <QJsonObject>
 #include <QLocalSocket>
+#include <QHash>
+#include <QNetworkAccessManager>
 #include <QObject>
 #include <QTimer>
 #include <QStringList>
@@ -32,6 +34,7 @@ class QJSEngine;
 namespace swiftify {
 
 class PlaybackController;
+struct Song;
 class Settings;
 
 namespace discord {
@@ -87,6 +90,7 @@ private:
     void onInactivityTimeout();
     enum class Failure { None, Unavailable, AccessDenied, TimedOut, InvalidFrame, RejectedConnection, RejectedActivity };
     void fail(Failure failure, int code = -1);
+    QUrl localCover(const Song &song);
 
     PlaybackController *m_player;
     Settings *m_settings;
@@ -94,6 +98,9 @@ private:
     Failure m_failure = Failure::None;
     int m_failureCode = -1;
     QLocalSocket m_socket;
+    QNetworkAccessManager m_network;
+    /// a local file's cover found online by title and artist; empty if none was
+    QHash<QString, QUrl> m_localCovers;
     QTimer m_retry;
     QTimer m_deadline;
     QTimer m_update;

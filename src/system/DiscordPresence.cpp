@@ -28,6 +28,8 @@
 #include <QJsonDocument>
 #include <QJSEngine>
 #include <QLoggingCategory>
+#include <QNetworkReply>
+#include <QUrlQuery>
 #include <QSignalBlocker>
 #include <QUuid>
 #include <QtEndian>
@@ -407,6 +409,37 @@ void DiscordPresence::clear()
     m_published = false;
 }
 
+// Discord only shows https images, never a file on disk, so a local song's
+// cover is looked up on Deezer by artist and title (as the in-app fallback
+// does). Only artist and title are sent, never the path.
+QUrl DiscordPresence::localCover(const Song &song)
+{
+    const auto cached = m_localCovers.constFind(song.uri);
+    if (cached != m_localCovers.constEnd()) return *cached;
+    const QString query = (song.artists + QLatin1Char(' ') + song.name).trimmed();
+    if (query.isEmpty()) return {};
+    m_localCovers.insert(song.uri, {}); // also marks the lookup as started
+    QUrl url(QStringLiteral("https://api.deezer.com/search"));
+    QUrlQuery params;
+    params.addQueryItem(QStringLiteral("q"), query);
+    params.addQueryItem(QStringLiteral("limit"), QStringLiteral("1"));
+    url.setQuery(params);
+    QNetworkRequest request(url);
+    request.setTransferTimeout(8'000);
+    QNetworkReply *reply = m_network.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, uri = song.uri] {
+        reply->deleteLater();
+        const QJsonArray data = QJsonDocument::fromJson(reply->readAll()).object()
+            .value(QStringLiteral("data")).toArray();
+        const QUrl cover(data.isEmpty() ? QString() : data.first().toObject().value(QStringLiteral("album"))
+            .toObject().value(QStringLiteral("cover_xl")).toString());
+        if (cover.scheme() != QLatin1StringView("https")) return;
+        m_localCovers.insert(uri, cover);
+        scheduleUpdate();
+    });
+    return {};
+}
+
 void DiscordPresence::update()
 {
     if (!m_ready) return;
@@ -423,11 +456,13 @@ void DiscordPresence::update()
         : song.artists.trimmed().isEmpty() ? tr("Paused") : tr("Paused") + QStringLiteral(" · ") + song.artists);
     if (!state.isEmpty()) activity.insert(QStringLiteral("state"), state);
     // Never expose local file paths, filenames, or private artwork URLs.
-    if (!song.isLocalFile() && song.artworkUrl.scheme() == QLatin1StringView("https")
-        && (song.artworkUrl.host() == QLatin1StringView("i.scdn.co")
-            || song.artworkUrl.host().endsWith(QLatin1StringView("googleusercontent.com"))
-            || song.artworkUrl.host() == QLatin1StringView("yt3.ggpht.com"))) {
-        QJsonObject assets {{QStringLiteral("large_image"), song.artworkUrl.toString()}};
+    const QUrl artwork = song.isLocalFile() ? localCover(song) : song.artworkUrl;
+    if ((song.isLocalFile() ? artwork.host().endsWith(QLatin1StringView(".dzcdn.net"))
+        : (artwork.host() == QLatin1StringView("i.scdn.co")
+            || artwork.host().endsWith(QLatin1StringView("googleusercontent.com"))
+            || artwork.host() == QLatin1StringView("yt3.ggpht.com")))
+        && artwork.scheme() == QLatin1StringView("https")) {
+        QJsonObject assets {{QStringLiteral("large_image"), artwork.toString()}};
         const QString album = fitText(song.albumName);
         if (!album.isEmpty()) assets.insert(QStringLiteral("large_text"), album);
         activity.insert(QStringLiteral("assets"), assets);

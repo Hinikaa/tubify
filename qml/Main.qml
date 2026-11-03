@@ -107,7 +107,7 @@ ApplicationWindow {
         if (App.quitting) {
             return
         }
-        if (App.macOS || App.windows) {
+        if (Settings.keepRunningInBackground) {
             close.accepted = false
             window.hide()
             App.trimMemory()

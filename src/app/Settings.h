@@ -87,6 +87,7 @@ class Settings : public QObject {
     Q_PROPERTY(bool trackListening READ trackListening WRITE setTrackListening NOTIFY trackListeningChanged FINAL)
     Q_PROPERTY(bool nativeTitleBar READ nativeTitleBar WRITE setNativeTitleBar NOTIFY nativeTitleBarChanged FINAL)
     Q_PROPERTY(bool trayIcon READ trayIcon WRITE setTrayIcon NOTIFY trayIconChanged FINAL)
+    Q_PROPERTY(bool keepRunningInBackground READ keepRunningInBackground WRITE setKeepRunningInBackground NOTIFY keepRunningInBackgroundChanged FINAL)
     /// the whole window's zoom, as ctrl + and ctrl - set it
     Q_PROPERTY(double zoom READ zoom WRITE setZoom NOTIFY zoomChanged FINAL)
     Q_PROPERTY(bool discordEnabled READ discordEnabled WRITE setDiscordEnabled NOTIFY discordEnabledChanged FINAL)
@@ -215,6 +216,8 @@ public:
     /// linux only
     bool trayIcon() const { return m_trayIcon; }
     void setTrayIcon(bool value);
+    bool keepRunningInBackground() const { return m_keepRunningInBackground; }
+    void setKeepRunningInBackground(bool value);
     double zoom() const { return m_zoom; }
     void setZoom(double value);
     bool discordEnabled() const { return m_discordEnabled; }
@@ -277,6 +280,7 @@ signals:
     void trackListeningChanged();
     void nativeTitleBarChanged();
     void trayIconChanged();
+    void keepRunningInBackgroundChanged();
     void zoomChanged();
     void discordEnabledChanged();
     void discordApplicationIdChanged();
@@ -333,6 +337,7 @@ private:
     bool m_nativeTitleBar = true;
 #endif
     bool m_trayIcon = true;
+    bool m_keepRunningInBackground = false;
     double m_zoom = 1.0;
     bool m_discordEnabled = false;
     QString m_discordApplicationId;

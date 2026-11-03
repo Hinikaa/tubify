@@ -202,6 +202,7 @@ void Settings::load()
     m_trackListening = stored<bool>(m_store, "trackListening", m_trackListening);
     m_nativeTitleBar = stored<bool>(m_store, "nativeTitleBar", m_nativeTitleBar);
     m_trayIcon = stored<bool>(m_store, "trayIcon", m_trayIcon);
+    m_keepRunningInBackground = stored<bool>(m_store, "keepRunningInBackground", m_keepRunningInBackground);
     m_zoom = std::clamp(stored<double>(m_store, "zoom", m_zoom), 0.5, 2.0);
     m_discordEnabled = stored<bool>(m_store, "discordEnabled", false);
     const QString id = stored<QString>(m_store, "discordApplicationId", {}).trimmed();
@@ -635,6 +636,14 @@ void Settings::setTrayIcon(bool value)
     m_trayIcon = value;
     m_store.setValue(QStringLiteral("trayIcon"), value);
     emit trayIconChanged();
+}
+
+void Settings::setKeepRunningInBackground(bool value)
+{
+    if (m_keepRunningInBackground == value) return;
+    m_keepRunningInBackground = value;
+    m_store.setValue(QStringLiteral("keepRunningInBackground"), value);
+    emit keepRunningInBackgroundChanged();
 }
 
 void Settings::setZoom(double raw)

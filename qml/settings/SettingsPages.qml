@@ -517,6 +517,14 @@ Item {
                     checked: Settings.trayIcon
                     onToggledTo: (checked) => Settings.trayIcon = checked
                 }
+                ConfigSwitch {
+                    text: qsTr("Keep running in background")
+                    checked: Settings.keepRunningInBackground
+                    onToggledTo: (checked) => Settings.keepRunningInBackground = checked
+                }
+                NoteText {
+                    text: qsTr("When off, closing the window quits and stops playback. When on, it hides and keeps playing.")
+                }
                 NoteText {
                     text: App.windows
                         ? qsTr("closing the window keeps Tubify running in the tray. choose Quit Tubify from the tray menu to exit.")

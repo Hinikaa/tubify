@@ -316,9 +316,7 @@ QCoro::Task<StatsSnapshot> LastFmClient::snapshot(QString username, StatsPeriod 
     snapshot.uniqueAlbums = snapshot.topAlbums.size();
     snapshot.activeDays = snapshot.daily.size();
     snapshot.streakDays = streakEndingAt(snapshot.daily, QDate::currentDate());
-    if (period == StatsPeriod::Today) {
-        snapshot.plays = snapshot.recent.size();
-    } else if (snapshot.plays == 0) {
+    if (snapshot.plays == 0) {
         for (const StatEntry &entry : std::as_const(snapshot.topTracks)) {
             snapshot.plays += entry.plays;
         }

@@ -737,31 +737,10 @@ Item {
                     checked: Settings.discordEnabled
                     onToggledTo: (checked) => Settings.discordEnabled = checked
                 }
-                OutlinedTextField {
-                    id: discordId
-                    x: 8
-                    width: Math.min(460, parent.width - 16)
-                    placeholder: qsTr("Discord Application ID")
-                    text: Settings.discordApplicationId
-                    onAccepted: Settings.discordApplicationId = text
-                    Connections {
-                        target: discordId.inputItem
-                        function onActiveFocusChanged() {
-                            if (!discordId.inputItem.activeFocus) Settings.discordApplicationId = discordId.text
-                        }
-                    }
-                }
                 NoteText {
-                    text: discordId.text.length > 0 && !/^[0-9]{17,20}$/.test(discordId.text.trim())
-                        ? qsTr("Enter a valid numeric Application ID (17–20 digits).")
-                        : !Settings.discordEnabled ? qsTr("Listening activity is private. Enable to share track, artist and progress with Discord.")
-                            : qsTr("The field is optional. A shared app is used by default, so it works without setup.") + " " + Discord.status
-                }
-                TextButton {
-                    x: 8
-                    text: qsTr("Open Discord Developer Portal")
-                    variant: TextButton.Text
-                    onClicked: Qt.openUrlExternally("https://discord.com/developers/applications")
+                    text: Settings.discordEnabled
+                          ? qsTr("Uses a shared Discord app, so it works without setup. ") + Discord.status
+                          : qsTr("Listening activity is private. Enable to share track, artist and progress with Discord.")
                 }
             }
 
@@ -813,21 +792,6 @@ Item {
                         }
                     }
                 }
-                OutlinedTextField {
-                    id: lastFmApiKey
-                    visible: Stats.source === "lastfm"
-                    x: 8
-                    width: Math.min(460, parent.width - 16)
-                    placeholder: qsTr("Last.fm API key")
-                    text: Stats.lastFmApiKey
-                    onAccepted: Stats.lastFmApiKey = text
-                    Connections {
-                        target: lastFmApiKey.inputItem
-                        function onActiveFocusChanged() {
-                            if (!lastFmApiKey.inputItem.activeFocus) Stats.lastFmApiKey = lastFmApiKey.text
-                        }
-                    }
-                }
                 ConfigSwitch {
                     text: qsTr("Keep track of what I listen to")
                     checked: Stats.tracking
@@ -852,7 +816,7 @@ Item {
                 }
                 NoteText {
                     text: Stats.source === "lastfm"
-                          ? qsTr("Last.fm needs your username and a free API key from last.fm/api/account/create. It reads the scrobbles already on your profile.")
+                          ? qsTr("Reads your public Last.fm scrobbles with a shared key. No API key is needed.")
                           : Stats.source === "statsfm"
                             ? qsTr("stats.fm only needs a public username. songs count here after 30 seconds (%1 so far) and are local only").arg(Stats.historyCount)
                             : qsTr("songs count here after 30 seconds (%1 so far) and are local only").arg(Stats.historyCount)

@@ -107,7 +107,7 @@ ApplicationWindow {
         if (App.quitting) {
             return
         }
-        if (App.macOS || App.windows || Player.playing || (Settings.trayIcon && App.trayAvailable)) {
+        if (App.macOS || App.windows) {
             close.accepted = false
             window.hide()
             App.trimMemory()

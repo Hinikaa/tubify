@@ -139,12 +139,13 @@ QString LastFmClient::periodName(StatsPeriod period)
     return QStringLiteral("1month");
 }
 
-QCoro::Task<QJsonObject> LastFmClient::getUrl(QUrl url)
+QCoro::Task<QJsonObject> LastFmClient::getUrl(QUrl url, QByteArray body)
 {
     QNetworkRequest request(url);
     request.setRawHeader("Accept", "application/json");
+    if (!body.isEmpty()) request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/x-www-form-urlencoded"));
     request.setTransferTimeout(15'000);
-    std::unique_ptr<QNetworkReply> reply(m_network->get(request));
+    std::unique_ptr<QNetworkReply> reply(body.isEmpty() ? m_network->get(request) : m_network->post(request, body));
     co_await qCoro(reply.get()).waitForFinished();
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QByteArray data = reply->readAll();
@@ -194,8 +195,7 @@ QCoro::Task<QJsonObject> LastFmClient::getSigned(QString method, QUrlQuery query
                        QString::fromLatin1(QCryptographicHash::hash(signature.toUtf8(), QCryptographicHash::Md5).toHex()));
     query.addQueryItem(QStringLiteral("format"), QStringLiteral("json"));
     QUrl url(kApiBase);
-    url.setQuery(query);
-    co_return co_await getUrl(url);
+    co_return co_await getUrl(url, query.toString(QUrl::FullyEncoded).toUtf8());
 }
 
 QCoro::Task<QString> LastFmClient::requestToken()
@@ -316,7 +316,9 @@ QCoro::Task<StatsSnapshot> LastFmClient::snapshot(QString username, StatsPeriod 
     snapshot.uniqueAlbums = snapshot.topAlbums.size();
     snapshot.activeDays = snapshot.daily.size();
     snapshot.streakDays = streakEndingAt(snapshot.daily, QDate::currentDate());
-    if (snapshot.plays == 0) {
+    if (period == StatsPeriod::Today) {
+        snapshot.plays = snapshot.recent.size();
+    } else if (snapshot.plays == 0) {
         for (const StatEntry &entry : std::as_const(snapshot.topTracks)) {
             snapshot.plays += entry.plays;
         }

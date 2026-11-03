@@ -61,7 +61,7 @@ public:
 private:
     QCoro::Task<QJsonObject> get(QString method, QString apiKey, QUrlQuery query);
     QCoro::Task<QJsonObject> getSigned(QString method, QUrlQuery query, QString sessionKey = {});
-    QCoro::Task<QJsonObject> getUrl(QUrl url);
+    QCoro::Task<QJsonObject> getUrl(QUrl url, QByteArray body = {});
     QNetworkAccessManager *m_network;
 };
 

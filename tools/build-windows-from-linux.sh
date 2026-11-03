@@ -74,7 +74,7 @@ for tool in x86_64-w64-mingw32-g++ x86_64-w64-mingw32-gcc x86_64-w64-mingw32-win
 done
 
 SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
+VERSION="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
 [[ -n "$VERSION" ]] || fail "could not read the version from CMakeLists.txt"
 NAME="swiftify-$VERSION-windows-x86_64"
 mkdir -p "$OUT"

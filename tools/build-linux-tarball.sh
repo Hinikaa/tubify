@@ -115,6 +115,7 @@ cmake -S "$SOURCE" -B "$WORK/swiftify" "${common[@]}" -DCMAKE_INSTALL_PREFIX=/us
 cmake --build "$WORK/swiftify" --parallel "$JOBS"
 rm -rf "${APPDIR:?}"
 DESTDIR="$APPDIR" cmake --install "$WORK/swiftify"
+ln -sf swiftify "$APPDIR/usr/bin/tubify"
 
 # linuxdeploy only brings x11 by itself. wayland needs its platform plugin and
 # the shell, decoration and graphics plugins beside it, or it falls back to

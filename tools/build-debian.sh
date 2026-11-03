@@ -60,9 +60,9 @@ done
 # Find repo root
 if [[ -n "$REPO_DIR" ]]; then
     cd "$REPO_DIR"
-elif [[ -f "CMakeLists.txt" ]] && grep -q "project(Swiftify" CMakeLists.txt 2>/dev/null; then
+elif [[ -f "CMakeLists.txt" ]] && grep -q "project(Tubify" CMakeLists.txt 2>/dev/null; then
     : # already in repo root
-elif [[ -f "../CMakeLists.txt" ]] && grep -q "project(Swiftify" ../CMakeLists.txt 2>/dev/null; then
+elif [[ -f "../CMakeLists.txt" ]] && grep -q "project(Tubify" ../CMakeLists.txt 2>/dev/null; then
     cd ..
 else
     error "Run this script from the swiftify repository root, or pass the path as an argument"

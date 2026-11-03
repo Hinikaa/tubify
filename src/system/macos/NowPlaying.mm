@@ -50,12 +50,12 @@ id<NSObject> beginPlaybackActivity()
 }
 
 /// lets go of an activity the player took, if it holds one
-void endPlaybackActivity(id<NSObject> &activity)
+id<NSObject> endPlaybackActivity(id<NSObject> activity)
 {
     if (activity) {
         [[NSProcessInfo processInfo] endActivity:activity];
-        activity = nil;
     }
+    return nil;
 }
 
 } // namespace
@@ -126,7 +126,7 @@ NowPlaying::~NowPlaying()
     for (NSUInteger index = 0; index < m_native->commands.count; ++index) {
         [m_native->commands[index] removeTarget:m_native->targets[index]];
     }
-    endPlaybackActivity(m_native->activity);
+    m_native->activity = endPlaybackActivity(m_native->activity);
     MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
     center.nowPlayingInfo = nil;
     center.playbackState = MPNowPlayingPlaybackStateStopped;
@@ -150,7 +150,7 @@ void NowPlaying::update()
         center.nowPlayingInfo = nil;
         center.playbackState = MPNowPlayingPlaybackStateStopped;
         m_publishedAt.invalidate();
-        endPlaybackActivity(m_native->activity);
+        m_native->activity = endPlaybackActivity(m_native->activity);
         return;
     }
 
@@ -171,7 +171,7 @@ void NowPlaying::update()
             m_native->activity = beginPlaybackActivity();
         }
     } else {
-        endPlaybackActivity(m_native->activity);
+        m_native->activity = endPlaybackActivity(m_native->activity);
     }
 
     NSMutableDictionary *info = [NSMutableDictionary dictionary];

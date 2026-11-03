@@ -128,12 +128,16 @@ Item {
     Component.onCompleted: resolveDeezer()
 
     function resolveDeezer() {
-        if (artist.length === 0 && albumName.length === 0) return
+        if (artist.length === 0 && albumName.length === 0) {
+            deezerSource = ""
+            return
+        }
         const query = artworkKind === 1 ? artist
                     : artworkKind === 2 ? (artist + " " + albumName)
                     : (artist + " " + title)
         if (query.trim().length === 0 || query === deezerQuery) return
         deezerQuery = query
+        deezerSource = ""
         const base = artworkKind === 1 ? "https://api.deezer.com/search/artist"
                    : artworkKind === 2 ? "https://api.deezer.com/search/album"
                    : "https://api.deezer.com/search"

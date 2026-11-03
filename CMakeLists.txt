@@ -28,7 +28,7 @@ if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 project(Tubify
-    VERSION 0.1.0
+    VERSION 0.1.1
     DESCRIPTION "A native YouTube Music client"
     LANGUAGES C CXX)
 

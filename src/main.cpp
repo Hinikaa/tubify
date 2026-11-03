@@ -266,7 +266,10 @@ int main(int argc, char *argv[])
 #else
     QGuiApplication application(argc, argv);
 #endif
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+    // the window is hidden to the tray on windows, and on the mac to the dock
+    // (Main.qml's onClosing quits by hand when it should): a closed window is
+    // not the app ending, so qt is not to take it as one
     application.setQuitOnLastWindowClosed(false);
 #endif
 #ifdef Q_OS_UNIX

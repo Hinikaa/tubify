@@ -35,10 +35,10 @@ namespace swiftify {
 
 /// cover art, fetched once and kept (ArtworkDataRepository.swift).
 ///
-/// encoded bytes come through a disk cache under ~/.cache/Swiftify and a small
-/// memory cache; requests for the same url share one download. decoded images
-/// are cached per size bucket, decoded off the gui thread straight at the size
-/// they are shown, never at the full size spotify serves.
+/// encoded bytes come through a disk cache under paths::cacheDirectory() and a
+/// small memory cache; requests for the same url share one download. decoded
+/// images are cached per size bucket, decoded off the gui thread straight at
+/// the size they are shown, never at the full size spotify serves.
 class ArtworkCache : public QObject {
     Q_OBJECT
 

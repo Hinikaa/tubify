@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    the app bundle's Info.plist. cmake fills in the MACOSX_BUNDLE variables
+    the build sets as target properties (spelled with a dollar and braces, as
+    cmake's bundle generator substitutes them), and the at-sign placeholders
+    below from CMakeLists.txt: this template is configured with @ONLY first,
+    then configured again by the bundle generator.
+-->
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
@@ -7,12 +14,10 @@
     <key>CFBundleDisplayName</key>
     <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
     <key>CFBundleExecutable</key>
-    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+    <string>@SWIFTIFY_BUNDLE_EXECUTABLE@</string>
     <key>CFBundleIconFile</key>
     <string>${MACOSX_BUNDLE_ICON_FILE}</string>
-    <!-- the icon composer icon in Assets.car, where the build compiled one -->
-    <key>CFBundleIconName</key>
-    <string>tubify</string>
+    @SWIFTIFY_ICON_NAME_KEY@
     <key>CFBundleIdentifier</key>
     <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -25,6 +30,8 @@
     <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
     <key>CFBundleVersion</key>
     <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
     <!-- the allocator favours memory over speed (main.cpp, startCompact) -->
     <key>LSEnvironment</key>
     <dict>
@@ -34,12 +41,19 @@
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.music</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>@SWIFTIFY_BUNDLE_MINIMUM_MACOS@</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
     <true/>
+    <!-- what the app keeps of the person's is written as it goes (the
+         library, the listening history, a login that rotated): the system
+         must not terminate it suddenly, or reap it while it plays hidden -->
+    <key>NSSupportsSuddenTermination</key>
+    <false/>
+    <key>NSSupportsAutomaticTermination</key>
+    <false/>
 </dict>
 </plist>

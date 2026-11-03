@@ -38,6 +38,26 @@ namespace {
 constexpr qint64 kJumpToleranceMs = 1500;
 constexpr int kArtworkPixels = 600;
 
+/// an app with no window on screen is app-napped: its timers are coalesced
+/// and its audio thread is starved, and a song played hidden stutters. an
+/// activity for as long as it plays keeps the system off it, and it is let go
+/// of as it pauses, so an idle app naps as any other. the system may still
+/// sleep: the music stops then, as it would anyway
+id<NSObject> beginPlaybackActivity()
+{
+    return [[NSProcessInfo processInfo] beginActivityWithOptions:NSActivityUserInitiatedAllowingIdleSystemSleep
+                                                           reason:@"playing a song"];
+}
+
+/// lets go of an activity the player took, if it holds one
+void endPlaybackActivity(id<NSObject> &activity)
+{
+    if (activity) {
+        [[NSProcessInfo processInfo] endActivity:activity];
+        activity = nil;
+    }
+}
+
 } // namespace
 
 // compiled with arc, so these hold their objects strongly
@@ -45,6 +65,7 @@ struct NowPlaying::Native {
     NSMutableArray<MPRemoteCommand *> *commands = [NSMutableArray array];
     NSMutableArray *targets = [NSMutableArray array];
     MPMediaItemArtwork *artwork = nil;
+    id<NSObject> activity = nil;
 };
 
 NowPlaying::NowPlaying(PlaybackController *player, ArtworkCache *artwork, QObject *parent)
@@ -105,6 +126,7 @@ NowPlaying::~NowPlaying()
     for (NSUInteger index = 0; index < m_native->commands.count; ++index) {
         [m_native->commands[index] removeTarget:m_native->targets[index]];
     }
+    endPlaybackActivity(m_native->activity);
     MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
     center.nowPlayingInfo = nil;
     center.playbackState = MPNowPlayingPlaybackStateStopped;
@@ -128,6 +150,7 @@ void NowPlaying::update()
         center.nowPlayingInfo = nil;
         center.playbackState = MPNowPlayingPlaybackStateStopped;
         m_publishedAt.invalidate();
+        endPlaybackActivity(m_native->activity);
         return;
     }
 
@@ -141,6 +164,15 @@ void NowPlaying::update()
     m_publishedPositionMs = m_player->livePositionMs();
     m_publishedPlaying = m_player->isPlaying();
     m_publishedAt.start();
+    // the window may be closed to the dock while it plays: without this the
+    // app naps and the song stutters
+    if (m_publishedPlaying) {
+        if (!m_native->activity) {
+            m_native->activity = beginPlaybackActivity();
+        }
+    } else {
+        endPlaybackActivity(m_native->activity);
+    }
 
     NSMutableDictionary *info = [NSMutableDictionary dictionary];
     info[MPMediaItemPropertyTitle] = song.name.toNSString();

@@ -101,9 +101,11 @@ class Settings : public QObject {
     Q_PROPERTY(QString disabledLanguageMessage READ disabledLanguageMessage CONSTANT FINAL)
 
 public:
-    /// the default file, ~/.config/Swiftify/Swiftify.conf. no default argument:
-    /// qml builds a singleton with a default constructor in preference to
-    /// create(), and would end up with an instance of its own
+    /// the person's own file, in the platform's configuration folder:
+    /// ~/.config/Tubify/Tubify.ini on linux, ~/Library/Preferences/Tubify/
+    /// Tubify.ini on macos. no default argument: qml builds a singleton with a
+    /// default constructor in preference to create(), and would end up with an
+    /// instance of its own
     explicit Settings(QObject *parent);
     /// a specific file, for tests
     explicit Settings(const QString &path, QObject *parent = nullptr);
@@ -337,7 +339,14 @@ private:
     bool m_nativeTitleBar = true;
 #endif
     bool m_trayIcon = true;
+#ifdef Q_OS_MACOS
+    /// closing the window hides it and the music plays on, as on any mac app,
+    /// and the dock brings it back. elsewhere the window is the app, and
+    /// closing it quits unless the tray is there to come back from
+    bool m_keepRunningInBackground = true;
+#else
     bool m_keepRunningInBackground = false;
+#endif
     double m_zoom = 1.0;
     bool m_discordEnabled = false;
     QString m_discordApplicationId;

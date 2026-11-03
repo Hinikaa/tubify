@@ -18,6 +18,15 @@
 
 cmake_minimum_required(VERSION 3.24)
 
+# the oldest macos the app runs on. it is what the compiler, the bundle's
+# LSMinimumSystemVersion and the frameworks it carries are built against, and
+# it has to be set before the compiler is first asked what it can do. 13 is
+# the oldest macos apple still updates, and what qt 6.10 needs at least
+if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING
+        "The oldest macOS the app runs on, which the bundle and Qt are built against")
+endif()
+
 project(Tubify
     VERSION 0.1.0
     DESCRIPTION "A native YouTube Music client"
@@ -70,6 +79,13 @@ if(SWIFTIFY_IS_LINUX)
     find_package(Qt6 6.10 REQUIRED COMPONENTS DBus Widgets)
 else()
     find_package(Qt6 6.10 OPTIONAL_COMPONENTS DBus)
+endif()
+# mpris and logind are linux's: qt ships d-bus on macos too, but nothing here
+# talks to it there, and linking it would drag libdbus into the bundle
+if(SWIFTIFY_IS_LINUX AND TARGET Qt6::DBus)
+    set(SWIFTIFY_DBUS ON)
+else()
+    set(SWIFTIFY_DBUS OFF)
 endif()
 if(SWIFTIFY_DESKTOP_INTEGRATION)
     find_package(PkgConfig REQUIRED)
@@ -124,10 +140,15 @@ target_include_directories(ytmusic_core INTERFACE
 # what rustc reports as the staticlib's native dependencies
 # (cargo rustc -- --print native-static-libs).
 if(APPLE)
+    # what cpal plays through on macos: coreaudio's auhal output unit lives in
+    # AudioToolbox and AudioUnit, and rust's std and rustls bring the rest.
+    # audio_unit is not in coreaudio's older lists, and its symbols are only
+    # reached at run time, so leaving it out links and then fails to open a
+    # device
     target_link_libraries(ytmusic_core INTERFACE
-        "-framework AudioToolbox" "-framework CoreAudio" "-framework IOKit"
-        "-framework CoreFoundation" "-framework Foundation" "-framework SystemConfiguration"
-        "-framework Security" objc iconv)
+        "-framework AudioToolbox" "-framework AudioUnit" "-framework CoreAudio"
+        "-framework IOKit" "-framework CoreFoundation" "-framework Foundation"
+        "-framework SystemConfiguration" "-framework Security" objc iconv)
 elseif(WIN32)
     # windows: wasapi for audio, schannel for tls, and what rust's std
     # needs; the linker leaves out any of them nothing uses
@@ -244,7 +265,7 @@ endif()
 if(NOT SWIFTIFY_DESKTOP_INTEGRATION)
     list(FILTER SWIFTIFY_SOURCES EXCLUDE REGEX "^src/system/linux/")
 endif()
-if(NOT TARGET Qt6::DBus)
+if(NOT SWIFTIFY_DBUS)
     list(FILTER SWIFTIFY_SOURCES EXCLUDE REGEX "^src/system/dbus/")
 endif()
 if(NOT SWIFTIFY_SOLOIST)
@@ -337,12 +358,12 @@ target_include_directories(swiftify_app PRIVATE tools/shape_atlas)
 target_compile_definitions(swiftify_app PUBLIC
     SWIFTIFY_VERSION="${PROJECT_VERSION}"
     $<$<BOOL:${SWIFTIFY_DESKTOP_INTEGRATION}>:SWIFTIFY_DESKTOP_INTEGRATION>
-    $<$<TARGET_EXISTS:Qt6::DBus>:SWIFTIFY_HAS_DBUS>)
+    $<$<BOOL:${SWIFTIFY_DBUS}>:SWIFTIFY_HAS_DBUS>)
 target_compile_definitions(swiftify_app PRIVATE
     SWIFTIFY_BUILD_FONT_DIRECTORY="${SWIFTIFY_FONT_DIRECTORY}")
 # main.cpp picks the core, and is built outside swiftify_app
 target_compile_definitions(swiftify_app PUBLIC $<$<BOOL:${SWIFTIFY_SOLOIST}>:SWIFTIFY_HAS_SOLOIST>)
-if(TARGET Qt6::DBus)
+if(SWIFTIFY_DBUS)
     target_link_libraries(swiftify_app PUBLIC Qt6::DBus)
 endif()
 if(SWIFTIFY_SOLOIST)
@@ -420,49 +441,70 @@ if(MINGW)
     set_target_properties(swiftify PROPERTIES qt_no_entrypoint ON)
 endif()
 
-# on macos, an app bundle: its own name in the menu bar and the dock, its own
-# icon, and an identifier apart from the swift app's (com.addenator.Swiftify)
+# on macos, an app bundle: Tubify.app, with its own name in the menu bar and
+# the dock, its own icon, and an identifier apart from the swift app's
+# (com.addenator.Swiftify). the executable inside is Tubify too, which is the
+# name activity monitor and codesign report
 if(APPLE)
     set(SWIFTIFY_ICON_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons)
-    # the swift app's icon composer icon, compiled as xcode compiles it: an
-    # asset catalog that macos 26 draws with its glass and its dark and tinted
-    # looks, and an .icns for older systems. without xcode's actool, an .icns
-    # made from the rendered pngs instead.
+    # the build number the bundle carries: a tag's version, unless a build
+    # numbers its own. apple wants one that only ever goes up
+    set(SWIFTIFY_BUILD_NUMBER "" CACHE STRING
+        "CFBundleVersion of the app bundle; the project version when empty")
+    if(NOT SWIFTIFY_BUILD_NUMBER)
+        set(SWIFTIFY_BUILD_NUMBER ${PROJECT_VERSION})
+    endif()
+    # an icon composer catalog (tubify.icon), compiled as xcode compiles it:
+    # an asset catalog that macos 26 draws with its glass and its dark and
+    # tinted looks, and an .icns for older systems. without one, an .icns
+    # drawn from the rendered pngs, which every mac reads. the pngs are the
+    # app's own: the swift app's catalog and pngs are left out, so the dock
+    # and the finder show Tubify's icon at every size
     execute_process(COMMAND xcrun --find actool
         OUTPUT_VARIABLE SWIFTIFY_ACTOOL OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    if(SWIFTIFY_ACTOOL)
+    if(SWIFTIFY_ACTOOL AND EXISTS ${SWIFTIFY_ICON_SOURCE}/tubify.icon)
         set(SWIFTIFY_ICON_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon)
-        file(GLOB SWIFTIFY_ICON_PARTS LIST_DIRECTORIES false CONFIGURE_DEPENDS ${SWIFTIFY_ICON_SOURCE}/swiftify.icon/*
-            ${SWIFTIFY_ICON_SOURCE}/swiftify.icon/Assets/*)
-        add_custom_command(OUTPUT ${SWIFTIFY_ICON_OUTPUT}/Assets.car ${SWIFTIFY_ICON_OUTPUT}/swiftify.icns
+        file(GLOB SWIFTIFY_ICON_PARTS LIST_DIRECTORIES false CONFIGURE_DEPENDS
+            ${SWIFTIFY_ICON_SOURCE}/tubify.icon/* ${SWIFTIFY_ICON_SOURCE}/tubify.icon/Assets/*)
+        add_custom_command(OUTPUT ${SWIFTIFY_ICON_OUTPUT}/Assets.car ${SWIFTIFY_ICON_OUTPUT}/tubify.icns
             COMMAND ${CMAKE_COMMAND} -E make_directory ${SWIFTIFY_ICON_OUTPUT}
             COMMAND ${SWIFTIFY_ACTOOL} --compile ${SWIFTIFY_ICON_OUTPUT} --platform macosx
-                --minimum-deployment-target 13.0 --app-icon swiftify
+                --minimum-deployment-target ${CMAKE_OSX_DEPLOYMENT_TARGET} --app-icon tubify
                 --output-partial-info-plist ${SWIFTIFY_ICON_OUTPUT}/icon.plist
-                ${SWIFTIFY_ICON_SOURCE}/swiftify.icon > /dev/null
+                ${SWIFTIFY_ICON_SOURCE}/tubify.icon
             DEPENDS ${SWIFTIFY_ICON_PARTS}
             COMMENT "Compiling the app icon")
-        set(SWIFTIFY_ICON_FILES ${SWIFTIFY_ICON_OUTPUT}/Assets.car ${SWIFTIFY_ICON_OUTPUT}/swiftify.icns)
+        set(SWIFTIFY_ICON_FILES ${SWIFTIFY_ICON_OUTPUT}/Assets.car ${SWIFTIFY_ICON_OUTPUT}/tubify.icns)
+        set(SWIFTIFY_ICON_FILE_NAME tubify.icns)
+        # the icon the system finds in the asset catalog. a bundle that names
+        # one and carries no catalog shows no icon at all, so it is only named
+        # where one was compiled
+        set(SWIFTIFY_ICON_NAME_KEY "<key>CFBundleIconName</key>\n    <string>tubify</string>")
     else()
-        set(SWIFTIFY_ICONSET ${CMAKE_CURRENT_BINARY_DIR}/swiftify.iconset)
-        set(SWIFTIFY_ICNS ${CMAKE_CURRENT_BINARY_DIR}/swiftify.icns)
+        set(SWIFTIFY_ICONSET ${CMAKE_CURRENT_BINARY_DIR}/Tubify.iconset)
+        set(SWIFTIFY_ICNS ${CMAKE_CURRENT_BINARY_DIR}/Tubify.icns)
+        # iconutil takes a folder of exactly these names and sizes; the 1024
+        # pixel one a retina 512 wants is drawn from the 512
         add_custom_command(OUTPUT ${SWIFTIFY_ICNS}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${SWIFTIFY_ICONSET}
-            COMMAND sips -z 16 16 ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png --out ${SWIFTIFY_ICONSET}/icon_16x16.png > /dev/null
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png ${SWIFTIFY_ICONSET}/icon_16x16@2x.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png ${SWIFTIFY_ICONSET}/icon_32x32.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-64.png ${SWIFTIFY_ICONSET}/icon_32x32@2x.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-128.png ${SWIFTIFY_ICONSET}/icon_128x128.png
+            COMMAND sips -z 16 16 ${SWIFTIFY_ICON_SOURCE}/tubify-32.png --out ${SWIFTIFY_ICONSET}/icon_16x16.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-32.png ${SWIFTIFY_ICONSET}/icon_16x16@2x.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-32.png ${SWIFTIFY_ICONSET}/icon_32x32.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-64.png ${SWIFTIFY_ICONSET}/icon_32x32@2x.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-128.png ${SWIFTIFY_ICONSET}/icon_128x128.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-256.png ${SWIFTIFY_ICONSET}/icon_128x128@2x.png
             COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-256.png ${SWIFTIFY_ICONSET}/icon_256x256.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png ${SWIFTIFY_ICONSET}/icon_256x256@2x.png
-            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png ${SWIFTIFY_ICONSET}/icon_512x512.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-512.png ${SWIFTIFY_ICONSET}/icon_256x256@2x.png
+            COMMAND ${CMAKE_COMMAND} -E copy ${SWIFTIFY_ICON_SOURCE}/tubify-512.png ${SWIFTIFY_ICONSET}/icon_512x512.png
+            COMMAND sips -z 1024 1024 ${SWIFTIFY_ICON_SOURCE}/tubify-512.png --out ${SWIFTIFY_ICONSET}/icon_512x512@2x.png
             COMMAND iconutil --convert icns --output ${SWIFTIFY_ICNS} ${SWIFTIFY_ICONSET}
-            DEPENDS ${SWIFTIFY_ICON_SOURCE}/swiftify-32.png ${SWIFTIFY_ICON_SOURCE}/swiftify-64.png
-                ${SWIFTIFY_ICON_SOURCE}/swiftify-128.png ${SWIFTIFY_ICON_SOURCE}/tubify-256.png
-                ${SWIFTIFY_ICON_SOURCE}/swiftify-512.png
+            DEPENDS ${SWIFTIFY_ICON_SOURCE}/tubify-32.png ${SWIFTIFY_ICON_SOURCE}/tubify-64.png
+                ${SWIFTIFY_ICON_SOURCE}/tubify-128.png ${SWIFTIFY_ICON_SOURCE}/tubify-256.png
+                ${SWIFTIFY_ICON_SOURCE}/tubify-512.png
             COMMENT "Making the app icon")
         set(SWIFTIFY_ICON_FILES ${SWIFTIFY_ICNS})
+        set(SWIFTIFY_ICON_FILE_NAME Tubify.icns)
+        set(SWIFTIFY_ICON_NAME_KEY "")
     endif()
     set_source_files_properties(${SWIFTIFY_ICON_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     target_sources(swiftify PRIVATE ${SWIFTIFY_ICON_FILES})
@@ -479,32 +521,127 @@ if(APPLE)
     target_sources(swiftify PRIVATE LICENSE)
     set_source_files_properties(${SWIFTIFY_THIRD_PARTY_LICENSES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     target_sources(swiftify PRIVATE ${SWIFTIFY_THIRD_PARTY_LICENSES})
+    # the bundle's Info.plist, from the template: the MACOSX_BUNDLE_* the
+    # build sets are filled in by cmake itself, and what the template names
+    # with @...@ here
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/macos)
+    set(SWIFTIFY_MACOS_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/macos/Info.plist)
+    # the executable inside the bundle, which is not the target's name
+    set(SWIFTIFY_BUNDLE_EXECUTABLE Tubify)
+    set(SWIFTIFY_BUNDLE_MINIMUM_MACOS ${CMAKE_OSX_DEPLOYMENT_TARGET})
+    configure_file(packaging/macos/Info.plist.in ${SWIFTIFY_MACOS_INFO_PLIST} @ONLY)
     set_target_properties(swiftify PROPERTIES
         MACOSX_BUNDLE ON
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in
+        OUTPUT_NAME ${SWIFTIFY_BUNDLE_EXECUTABLE}
+        MACOSX_BUNDLE_INFO_PLIST ${SWIFTIFY_MACOS_INFO_PLIST}
         MACOSX_BUNDLE_BUNDLE_NAME Tubify
         MACOSX_BUNDLE_GUI_IDENTIFIER dev.hinikaa.Tubify
-        MACOSX_BUNDLE_ICON_FILE swiftify.icns
+        MACOSX_BUNDLE_ICON_FILE ${SWIFTIFY_ICON_FILE_NAME}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
-    # the linker signs only the executable; signing the bundle seals the icon
-    # and the font in with it, so the whole app checks out. a folder synced by
-    # icloud tags files with finder and file-provider attributes, which
-    # codesign refuses to seal, so they go first.
-    # ad hoc by default. an identity of one's own keeps the signature's
-    # requirement the same from build to build, so the keychain hands over
-    # the stored logins without asking again after each one
+        MACOSX_BUNDLE_BUNDLE_VERSION ${SWIFTIFY_BUILD_NUMBER}
+        MACOSX_BUNDLE_COPYRIGHT "Copyright 2026 Hinika. Licensed under the GNU GPL v3 or later")
+
+    # signing. the linker signs only the executable; signing the bundle seals
+    # the icon and the font in with it, so the whole app checks out. a folder
+    # synced by icloud tags files with finder and file-provider attributes,
+    # which codesign refuses to seal, so they go first.
+    # ad hoc by default, which is enough to run it here. an identity of one's
+    # own keeps the signature's requirement the same from build to build, so
+    # the keychain hands over the stored logins without asking again after
+    # each one, and is what notarising needs
     set(SWIFTIFY_CODESIGN_IDENTITY "-" CACHE STRING "codesign identity for the app bundle; - signs ad hoc")
-    add_custom_command(TARGET swiftify POST_BUILD
-        COMMAND xattr -cr $<TARGET_BUNDLE_DIR:swiftify>
-        COMMAND codesign --force --sign ${SWIFTIFY_CODESIGN_IDENTITY} $<TARGET_BUNDLE_DIR:swiftify>
-        COMMENT "Signing the app bundle")
+    option(SWIFTIFY_CODESIGN "Sign the app bundle after linking" ON)
+    option(SWIFTIFY_HARDENED_RUNTIME
+        "Sign with the hardened runtime and packaging/macos/Tubify.entitlements, as notarising needs" OFF)
+    set(SWIFTIFY_CODESIGN_FLAGS --force --sign ${SWIFTIFY_CODESIGN_IDENTITY})
+    if(SWIFTIFY_HARDENED_RUNTIME)
+        list(APPEND SWIFTIFY_CODESIGN_FLAGS --options runtime
+            --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Tubify.entitlements)
+    endif()
+    if(SWIFTIFY_CODESIGN)
+        add_custom_command(TARGET swiftify POST_BUILD
+            COMMAND xattr -cr $<TARGET_BUNDLE_DIR:swiftify>
+            COMMAND codesign ${SWIFTIFY_CODESIGN_FLAGS} $<TARGET_BUNDLE_DIR:swiftify>
+            COMMENT "Signing the app bundle")
+    endif()
+
+    # qt's frameworks, plugins and qml modules, so the bundle runs on a mac
+    # without qt installed. macdeployqt is looked for beside the qmake the
+    # build found, never on the path: a homebrew qt would bundle its own qt
+    # over the kit's. off leaves the bundle linked against the qt it was built
+    # with, for running it from the build tree while working on it
+    option(SWIFTIFY_MACDEPLOYQT "Bundle Qt into the app with macdeployqt, at install and package time" ON)
+    if(TARGET Qt6::macdeployqt)
+        get_target_property(SWIFTIFY_MACDEPLOYQT_BIN Qt6::macdeployqt IMPORTED_LOCATION)
+    else()
+        get_target_property(SWIFTIFY_QMAKE Qt6::qmake IMPORTED_LOCATION)
+        get_filename_component(SWIFTIFY_QT_BIN "${SWIFTIFY_QMAKE}" DIRECTORY)
+        if(EXISTS "${SWIFTIFY_QT_BIN}/macdeployqt")
+            set(SWIFTIFY_MACDEPLOYQT_BIN "${SWIFTIFY_QT_BIN}/macdeployqt")
+        endif()
+    endif()
+    if(SWIFTIFY_MACDEPLOYQT AND NOT SWIFTIFY_MACDEPLOYQT_BIN)
+        message(WARNING "No macdeployqt in the Qt kit, so the app bundle carries no Qt and runs only on a "
+            "mac with this Qt installed. Point CMAKE_PREFIX_PATH at a full Qt kit.")
+    endif()
+    if(SWIFTIFY_MACDEPLOYQT AND SWIFTIFY_MACDEPLOYQT_BIN)
+        # for working on it: bundles qt into the build tree's bundle
+        add_custom_target(macdeploy
+            COMMAND ${SWIFTIFY_MACDEPLOYQT_BIN} $<TARGET_BUNDLE_DIR:swiftify>
+                -qmldir=${CMAKE_CURRENT_SOURCE_DIR}/qml -always-overwrite
+            COMMENT "Bundling Qt into the app")
+        add_dependencies(macdeploy swiftify)
+        # and for installing or packaging it: the installed bundle, in place,
+        # before cpack wraps it. the script is run by the install rule below
+        # the bundle's own, as it has nothing to deploy before that
+        configure_file(packaging/macos/deploy-qt.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/macos/deploy-qt.cmake @ONLY)
+    endif()
+
+    # the dmg opens to the app beside a link to applications, to drag it into;
+    # the zip is the same bundle for a script to unpack
+    if(CMAKE_OSX_ARCHITECTURES)
+        string(REPLACE ";" "-" SWIFTIFY_PACKAGE_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        execute_process(COMMAND uname -m OUTPUT_VARIABLE SWIFTIFY_PACKAGE_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+    set(CPACK_GENERATOR "DragNDrop;ZIP")
+    set(CPACK_PACKAGE_NAME "Tubify")
+    set(CPACK_PACKAGE_VENDOR "Hinika")
+    set(CPACK_PACKAGE_CONTACT "Hinika")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_PACKAGE_FILE_NAME "Tubify-${PROJECT_VERSION}-macos-${SWIFTIFY_PACKAGE_ARCH}")
+    # the bundle sits at the root of the package, where a dmg shows it beside
+    # the applications link to drag it into
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/")
+    set(CPACK_DMG_VOLUME_NAME "Tubify")
+    set(CPACK_DMG_FORMAT "UDZO")
+    set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK OFF)
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    # notarising is apple's, and needs a paid developer identity: off unless
+    # a build asks for it and names the keychain profile notarytool stored
+    option(SWIFTIFY_NOTARIZE "Notarise the packages with notarytool after cpack builds them" OFF)
+    set(SWIFTIFY_NOTARY_PROFILE "" CACHE STRING "the notarytool keychain profile to notarise with")
+    if(SWIFTIFY_NOTARIZE)
+        if(NOT SWIFTIFY_NOTARY_PROFILE)
+            message(FATAL_ERROR "SWIFTIFY_NOTARIZE needs -DSWIFTIFY_NOTARY_PROFILE=<profile>, as stored by "
+                "xcrun notarytool store-credentials")
+        endif()
+        configure_file(packaging/macos/notarize.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/macos/notarize.cmake @ONLY)
+        set(CPACK_POST_BUILD_SCRIPTS ${CMAKE_CURRENT_BINARY_DIR}/macos/notarize.cmake)
+    endif()
 endif()
 
 
 install(TARGETS swiftify
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     BUNDLE DESTINATION .)
+# after the bundle itself, which is what it fills with qt
+if(APPLE AND SWIFTIFY_MACDEPLOYQT AND SWIFTIFY_MACDEPLOYQT_BIN)
+    install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/macos/deploy-qt.cmake)
+endif()
 # the gpl has to go out with every copy of swiftify, so the tarball and the
 # windows zip carry it here and the app bundle in its resources
 if(NOT APPLE)
@@ -520,4 +657,11 @@ if(NOT APPLE AND NOT WIN32)
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
             RENAME tubify.png)
     endforeach()
+endif()
+
+# after every install rule above, so cpack's staging run carries them all.
+# only macos has a package: the linux tarball and the windows zip are the
+# scripts in tools/, which bundle more than cpack's install rules do
+if(APPLE)
+    include(CPack)
 endif()

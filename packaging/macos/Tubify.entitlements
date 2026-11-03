@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    the entitlements the app is signed with under the hardened runtime, which
+    is what notarising needs (SWIFTIFY_HARDENED_RUNTIME=ON). the app is not
+    sandboxed: it reads the music files of the person's own choosing and
+    writes its library, its listening history and its caches where a mac app
+    keeps them.
+
+    these two are what qt quick needs there, and what notarising will not
+    hand out to an app that leaves them out:
+-->
+<plist version="1.0">
+<dict>
+    <!-- the javascript engine qml runs compiles to executable memory -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <!-- qt loads its platform, image and qml plugins with dlopen at run time,
+         and library validation refuses a plugin not signed by the same team
+         when the app itself is only ad hoc signed -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

@@ -181,7 +181,7 @@ jobs:
 
       - name: version
         run: |
-          version="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          version="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
           if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "the tag $GITHUB_REF_NAME does not match the version $version in CMakeLists.txt" >&2
             exit 1

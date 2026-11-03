@@ -35,6 +35,8 @@ QString ensured(const QString &path)
 
 QString dataDirectory()
 {
+    // generic, not per-app: the location is the same whichever way the app is
+    // named, so a build of another name keeps the same library
     return ensured(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                    + QStringLiteral("/Tubify"));
 }
@@ -47,7 +49,13 @@ QString cacheDirectory()
 
 QString logDirectory()
 {
+#ifdef Q_OS_MACOS
+    // where a mac app's logs go: console.app lists the folder, and the system
+    // keeps it out of the app's own data
+    return ensured(QDir::homePath() + QStringLiteral("/Library/Logs/Tubify"));
+#else
     return ensured(dataDirectory() + QStringLiteral("/logs"));
+#endif
 }
 
 QString logFilePath()

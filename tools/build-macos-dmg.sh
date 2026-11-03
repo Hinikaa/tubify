@@ -15,29 +15,45 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# builds an arm64 swiftify.app with qt bundled, signed ad hoc, in a dmg,
+# builds an arm64 Tubify.app with qt bundled, signed ad hoc, in a dmg,
 # against a qt kit from the qt installer or aqtinstall
 #
 # usage
 #   ./tools/build-macos-dmg.sh --qt ~/Qt/6.12.0/macos
 #   ./tools/build-macos-dmg.sh --qt ~/Qt/6.12.0/macos --out dist --jobs 8
+#   ./tools/build-macos-dmg.sh --qt ~/Qt/6.12.0/macos \
+#       --sign "Developer ID Application: <name> (<team>)" --notary-profile tubify
 #
 # needs an apple silicon mac, cmake, ninja, git, xcode or its command line
 # tools, and rust from rustup. with full xcode the icon is compiled with actool
+#
+# --sign signs with the hardened runtime and packaging/macos/Tubify.entitlements,
+# which is what notarising needs, and --notary-profile notarises the dmg with
+# the keychain profile xcrun notarytool store-credentials saved, then staples
+# the ticket to it. both are off unless asked for
+#
+# without either, the dmg is signed ad hoc, and a copy that came off the
+# network carries the quarantine flag: the first launch needs it cleared
+# (xattr -dr com.apple.quarantine /Applications/Tubify.app) or a right click
+# and open
 
 set -euo pipefail
 
 QT=""
 OUT="dist"
 JOBS="$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+IDENTITY="-"
+NOTARY_PROFILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --qt) QT="$2"; shift 2 ;;
         --out) OUT="$2"; shift 2 ;;
         --jobs) JOBS="$2"; shift 2 ;;
+        --sign) IDENTITY="$2"; shift 2 ;;
+        --notary-profile) NOTARY_PROFILE="$2"; shift 2 ;;
         -h|--help)
-            sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '18,38p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) echo "unknown option $1" >&2; exit 1 ;;
@@ -55,14 +71,14 @@ for tool in cmake ninja git cargo codesign hdiutil lipo vtool; do
 done
 
 SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="$(sed -n '/^project(Swiftify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
+VERSION="$(sed -n '/^project(Tubify/,/VERSION/s/^ *VERSION \([0-9.]*\).*/\1/p' "$SOURCE/CMakeLists.txt")"
 [[ -n "$VERSION" ]] || fail "could not read the version from CMakeLists.txt"
-NAME="swiftify-$VERSION-macos-arm64"
+NAME="tubify-$VERSION-macos-arm64"
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 WORK="$SOURCE/build-macos-dmg"
 DEPS="$WORK/deps"
-APP="$WORK/Swiftify.app"
+APP="$WORK/Tubify.app"
 mkdir -p "$WORK/sources"
 
 # the oldest macos the kit's qt runs on, which the app can't go below
@@ -104,7 +120,7 @@ cmake -S "$SOURCE" -B "$WORK/swiftify" "${common[@]}" -DRust_CARGO_TARGET=aarch6
 cmake --build "$WORK/swiftify" --parallel "$JOBS"
 
 rm -rf "${APP:?}"
-ditto "$WORK/swiftify/swiftify.app" "$APP"
+ditto "$WORK/swiftify/Tubify.app" "$APP"
 plutil -replace LSMinimumSystemVersion -string "$MINIMUM" "$APP/Contents/Info.plist"
 "$QT/bin/macdeployqt" "$APP" "-qmldir=$SOURCE/qml"
 
@@ -123,9 +139,16 @@ while IFS= read -r -d '' file; do
 done < <(find "$APP" -type f -print0)
 
 # macdeployqt rewrote what the build signed, so the whole bundle is signed
-# again, ad hoc
+# again. ad hoc unless an identity is given, which is also what lets it be
+# notarised: the hardened runtime and the entitlements notarising wants go
+# with it, and a secure timestamp, which an ad hoc signature cannot carry
 xattr -cr "$APP"
-codesign --force --deep --sign - "$APP"
+if [[ "$IDENTITY" == "-" ]]; then
+    codesign --force --deep --sign - "$APP"
+else
+    codesign --force --deep --sign "$IDENTITY" --options runtime --timestamp \
+        --entitlements "$SOURCE/packaging/macos/Tubify.entitlements" "$APP"
+fi
 codesign --verify --deep --strict "$APP" || fail "the app's signature does not verify"
 
 # everything in it has to be arm64 alone, and find its libraries in the app
@@ -158,15 +181,24 @@ done
 STAGE="$WORK/dmg"
 rm -rf "${STAGE:?}"
 mkdir -p "$STAGE"
-ditto "$APP" "$STAGE/Swiftify.app"
+ditto "$APP" "$STAGE/Tubify.app"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$OUT/$NAME.dmg"
 for attempt in 1 2 3; do
-    if hdiutil create -volname Swiftify -srcfolder "$STAGE" -fs HFS+ -format UDZO "$OUT/$NAME.dmg"; then
+    if hdiutil create -volname Tubify -srcfolder "$STAGE" -fs HFS+ -format UDZO "$OUT/$NAME.dmg"; then
         break
     fi
     [[ $attempt -lt 3 ]] || fail "hdiutil could not make the dmg"
     sleep 5
 done
 hdiutil verify "$OUT/$NAME.dmg" >/dev/null || fail "the dmg does not verify"
+
+# notarised with the keychain profile given, and the ticket stapled to the
+# dmg, so a mac that downloads it opens it without the quarantine warning
+if [[ -n "$NOTARY_PROFILE" ]]; then
+    xcrun notarytool submit "$OUT/$NAME.dmg" --keychain-profile "$NOTARY_PROFILE" --wait \
+        || fail "notarytool refused the dmg"
+    xcrun stapler staple "$OUT/$NAME.dmg" || fail "the ticket could not be stapled to the dmg"
+    xcrun stapler validate "$OUT/$NAME.dmg" || fail "the dmg carries no ticket"
+fi
 echo "built $OUT/$NAME.dmg"

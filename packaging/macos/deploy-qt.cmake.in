@@ -1,0 +1,60 @@
+# Bundles Qt into the app bundle cmake has just installed, in place, so the
+# app runs on a mac without Qt: frameworks, plugins, qml modules, and the
+# translations of both. Run by `cmake --install` (and so by cpack's staging
+# run), before cpack wraps the bundle in a dmg or a zip.
+#
+# configured by CMakeLists.txt with @ONLY: the at-sign placeholders are the
+# build's, the dollar-and-brace ones are the install's.
+
+# the bundle as installed: cpack stages the install under DESTDIR, and
+# `cmake --install` with a prefix sets one too
+cmake_path(APPEND app_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}"
+    "@SWIFTIFY_BUNDLE_EXECUTABLE@.app" OUTPUT_VARIABLE app)
+if(NOT EXISTS "${app}")
+    # a linux or windows install: there is no bundle to deploy
+    return()
+endif()
+
+if(NOT EXISTS "@SWIFTIFY_MACDEPLOYQT_BIN@")
+    message(WARNING "No macdeployqt at @SWIFTIFY_MACDEPLOYQT_BIN@, so ${app} carries no Qt and runs only on a "
+        "mac with this Qt installed")
+    return()
+endif()
+
+message(STATUS "Bundling Qt into ${app}")
+execute_process(
+    COMMAND "@SWIFTIFY_MACDEPLOYQT_BIN@" "${app}"
+        "-qmldir=@CMAKE_CURRENT_SOURCE_DIR@/qml"
+        -always-overwrite
+    RESULT_VARIABLE result)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "macdeployqt failed on ${app} (${result})")
+endif()
+
+# qml's local storage brings qt's sql drivers along. all but sqlite link
+# database clients from outside the app, and nothing here uses them
+foreach(driver odbc psql mimer)
+    file(REMOVE "${app}/Contents/PlugIns/sqldrivers/libqsql${driver}.dylib")
+endforeach()
+
+# macdeployqt rewrote what the build signed, so the bundle is signed again,
+# with the same identity. --deep reaches the qt frameworks and plugins it
+# copied in, which are otherwise sealed under someone else's signature
+set(identity "@SWIFTIFY_CODESIGN_IDENTITY@")
+if(identity STREQUAL "-" AND NOT "@SWIFTIFY_CODESIGN@" STREQUAL "ON")
+    return()
+endif()
+set(flags --force --deep --sign "${identity}")
+# notarising wants a secure timestamp, which an ad hoc signature cannot carry
+if(NOT identity STREQUAL "-")
+    list(APPEND flags --timestamp)
+endif()
+if("@SWIFTIFY_HARDENED_RUNTIME@" STREQUAL "ON")
+    list(APPEND flags --options runtime
+        --entitlements "@CMAKE_CURRENT_SOURCE_DIR@/packaging/macos/Tubify.entitlements")
+endif()
+execute_process(COMMAND xattr -cr "${app}" RESULT_VARIABLE result)
+execute_process(COMMAND codesign ${flags} "${app}" RESULT_VARIABLE result)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "codesign failed on ${app} (${result})")
+endif()

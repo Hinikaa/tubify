@@ -1,0 +1,39 @@
+# Notarises the packages cpack has just built, and staples the ticket to each,
+# so a mac that downloads one runs it without the quarantine warning.
+#
+# off unless the build asks for it:
+#   cmake --build build --target package \
+#       -DSWIFTIFY_NOTARIZE=ON -DSWIFTIFY_NOTARY_PROFILE=tubify
+# with a profile stored once by
+#   xcrun notarytool store-credentials tubify --apple-id <id> --team-id <team> \
+#       --password <app specific password>
+# and a build signed with a Developer ID identity:
+#   -DSWIFTIFY_CODESIGN_IDENTITY="Developer ID Application: <name> (<team>)" \
+#   -DSWIFTIFY_HARDENED_RUNTIME=ON
+#
+# cpack runs this after packaging, with CPACK_PACKAGE_FILES holding what it
+# wrote.
+
+if(NOT CPACK_PACKAGE_FILES)
+    return()
+endif()
+
+foreach(package IN LISTS CPACK_PACKAGE_FILES)
+    message(STATUS "Notarising ${package}")
+    execute_process(
+        COMMAND xcrun notarytool submit "${package}"
+            --keychain-profile "@SWIFTIFY_NOTARY_PROFILE@" --wait
+        RESULT_VARIABLE result)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "notarytool refused ${package} (${result})")
+    endif()
+    # the ticket rides with the package, so the first launch needs no network
+    execute_process(COMMAND xcrun stapler staple "${package}" RESULT_VARIABLE result)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "stapler could not staple ${package} (${result})")
+    endif()
+    execute_process(COMMAND xcrun stapler validate "${package}" RESULT_VARIABLE result)
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "${package} carries no ticket (${result})")
+    endif()
+endforeach()

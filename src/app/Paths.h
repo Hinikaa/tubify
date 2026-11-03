@@ -22,14 +22,17 @@
 
 namespace swiftify::paths {
 
-/// $XDG_DATA_HOME/Swiftify, created on first use: what the app keeps of the
-/// person's, such as their local playlists.
+/// what the app keeps of the person's, such as their local playlists, created
+/// on first use: $XDG_DATA_HOME/Tubify on linux, ~/Library/Application
+/// Support/Tubify on macos.
 QString dataDirectory();
-/// $XDG_CACHE_HOME/Swiftify, for artwork and other things safe to delete.
+/// for artwork and other things safe to delete: $XDG_CACHE_HOME/Tubify on
+/// linux, ~/Library/Caches/Tubify on macos.
 QString cacheDirectory();
-/// $XDG_DATA_HOME/Swiftify/logs, for diagnostic output.
+/// for diagnostic output: dataDirectory()/logs on linux, ~/Library/Logs/Tubify
+/// on macos, where console.app lists it.
 QString logDirectory();
-/// $XDG_DATA_HOME/Swiftify/logs/swiftify.log
+/// logDirectory()/tubify.log
 QString logFilePath();
 
 } // namespace swiftify::paths

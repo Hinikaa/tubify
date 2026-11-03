@@ -14,7 +14,7 @@ A native desktop client built with Qt Quick and a Rust core.
 
 **[install](#install) · [build](#build) · [first run](#first-run) · [last.fm](#lastfm) · [discord](#discord) · [limits](#notes-and-limits)**
 
-<img src="assets/home.png" alt="Tubify home view">
+<img src="assets/immersive-tubify.png" alt="Tubify immersive player">
 
 </div>
 
@@ -32,16 +32,7 @@ local files, stats and queue are all still here.
 There is no Spotify Premium requirement, no Spotify client ID, and no Spotify
 account. A normal YouTube Music account is enough.
 
-<table>
-  <tr>
-    <td><img src="assets/eq.png" alt="equalizer, tempo and pitch settings" width="400"></td>
-    <td><img src="assets/immersive.png" alt="immersive player with visualizer and lyrics" width="400"></td>
-  </tr>
-  <tr>
-    <td align="center">equalizer, tempo and pitch</td>
-    <td align="center">immersive player with the visualizer and lyrics</td>
-  </tr>
-</table>
+
 
 ## what you get
 

@@ -60,15 +60,7 @@ Tubify is unofficial and is not affiliated with YouTube or Google.
 
 <img src="assets/player.png" alt="the player in its narrow layout" width="320">
 
-</details>
 
-<details>
-<summary><b>Settings</b> · Discord</summary>
-<br>
-
-<img src="assets/discord-settings.png" alt="Discord rich presence settings" width="520">
-
-</details>
 
 ## what you get
 

@@ -54,15 +54,6 @@ Tubify is unofficial and is not affiliated with YouTube or Google.
 
 </details>
 
-<details>
-<summary><b>Compact player</b> · the narrow layout</summary>
-<br>
-
-<img src="assets/player.png" alt="the player in its narrow layout" width="320">
-
-
-</details>
-
 ## what you get
 
 <details open>

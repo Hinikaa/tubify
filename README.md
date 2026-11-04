@@ -61,6 +61,7 @@ Tubify is unofficial and is not affiliated with YouTube or Google.
 <img src="assets/player.png" alt="the player in its narrow layout" width="320">
 
 
+</details>
 
 ## what you get
 
